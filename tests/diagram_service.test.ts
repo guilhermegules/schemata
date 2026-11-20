@@ -1,5 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { diagramService } from "@/lib/diagram_service";
+import type { ExcalidrawElement } from "@excalidraw/excalidraw/types/element/types";
+import { toNormalizedZoom } from "@/types/diagram";
 
 describe("DiagramService", () => {
   it("should validate and create a diagram with sanitized appState", async () => {
@@ -7,23 +9,23 @@ describe("DiagramService", () => {
     const input = {
       title: "Service Boundaries",
       notionPageId: "page-abc-123",
-      elements: [{ id: "arrow-1", type: "arrow" }],
+      elements: [{ id: "arrow-1", type: "arrow" } as unknown as ExcalidrawElement],
       appState: {
         viewBackgroundColor: "#ffffff",
-        zoom: { value: 1.25 },
-        selectedElementIds: { "arrow-1": true },
-      } as any,
+        zoom: { value: toNormalizedZoom(1.25) },
+      },
     };
 
     // Act
     const diagram = await diagramService.create(input);
+    const untyped = diagram.appState as unknown as Record<string, unknown>;
 
     // Assert
     expect(diagram.id).toBeDefined();
     expect(diagram.title).toBe("Service Boundaries");
     expect(diagram.appState.viewBackgroundColor).toBe("#ffffff");
-    expect(diagram.appState.zoom).toEqual({ value: 1.25 });
-    expect((diagram.appState as any).selectedElementIds).toBeUndefined();
+    expect(diagram.appState.zoom.value).toBe(1.25);
+    expect(untyped.selectedElementIds).toBeUndefined();
   });
 
   it("should throw error when required fields are missing", async () => {

@@ -2,6 +2,8 @@
 
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import dynamic from "next/dynamic";
+import type { ExcalidrawElement } from "@excalidraw/excalidraw/types/element/types";
+import type { AppState, BinaryFiles } from "@excalidraw/excalidraw/types/types";
 import { AppStatePersisted } from "@/types/diagram";
 import { sanitizeAppState } from "@/lib/sanitizer";
 
@@ -25,7 +27,7 @@ const Excalidraw = dynamic(
 
 interface ExcalidrawWrapperProps {
   diagramId: string;
-  initialElements?: readonly any[];
+  initialElements?: readonly ExcalidrawElement[];
   initialAppState?: Partial<AppStatePersisted>;
   isReadOnly?: boolean;
 }
@@ -38,18 +40,21 @@ export function ExcalidrawWrapper({
 }: ExcalidrawWrapperProps) {
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const latestDataRef = useRef<{ elements: readonly any[]; appState: any }>({
+  const latestDataRef = useRef<{
+    elements: readonly ExcalidrawElement[];
+    appState: Partial<AppState>;
+  }>({
     elements: initialElements,
     appState: initialAppState || {},
   });
   const hasPendingChangesRef = useRef<boolean>(false);
 
   const saveDiagram = useCallback(
-    async (elements: readonly any[], appState: any) => {
+    async (elements: readonly ExcalidrawElement[], appState: Partial<AppState>) => {
       if (isReadOnly) return;
       setSaveStatus("saving");
 
-      const sanitizedState = sanitizeAppState(appState);
+      const sanitizedState = sanitizeAppState(appState as Record<string, unknown>);
       const payload = {
         elements,
         appState: sanitizedState,
@@ -79,7 +84,7 @@ export function ExcalidrawWrapper({
   const flushViaBeacon = useCallback(() => {
     if (!hasPendingChangesRef.current || isReadOnly) return;
     const { elements, appState } = latestDataRef.current;
-    const sanitizedState = sanitizeAppState(appState);
+    const sanitizedState = sanitizeAppState(appState as Record<string, unknown>);
     const payload = JSON.stringify({
       elements,
       appState: sanitizedState,
@@ -113,7 +118,11 @@ export function ExcalidrawWrapper({
     };
   }, [flushViaBeacon]);
 
-  const handleChange = (elements: readonly any[], appState: any) => {
+  const handleChange = (
+    elements: readonly ExcalidrawElement[],
+    appState: AppState,
+    _files: BinaryFiles
+  ) => {
     if (isReadOnly) return;
 
     latestDataRef.current = { elements, appState };
@@ -127,6 +136,8 @@ export function ExcalidrawWrapper({
       saveDiagram(elements, appState);
     }, 2000);
   };
+
+  const initialSanitizedState = sanitizeAppState(initialAppState as Record<string, unknown> | undefined);
 
   return (
     <div className="relative h-full w-full">
@@ -159,7 +170,7 @@ export function ExcalidrawWrapper({
       <Excalidraw
         initialData={{
           elements: initialElements,
-          appState: sanitizeAppState(initialAppState) as any,
+          appState: initialSanitizedState,
         }}
         onChange={handleChange}
         viewModeEnabled={isReadOnly}

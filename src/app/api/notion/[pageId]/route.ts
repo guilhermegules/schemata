@@ -16,7 +16,8 @@ export async function GET(_req: Request, { params }: { params: Promise<{ pageId:
       },
       { status: 200 }
     );
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message || "Failed to fetch Notion page" }, { status: 502 });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Failed to fetch Notion page";
+    return NextResponse.json({ error: message }, { status: 502 });
   }
 }

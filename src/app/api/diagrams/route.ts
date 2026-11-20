@@ -12,7 +12,8 @@ export async function POST(req: Request) {
     const body = await req.json();
     const diagram = await diagramService.create(body);
     return NextResponse.json(diagram, { status: 201 });
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message || "Failed to create diagram" }, { status: 400 });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Failed to create diagram";
+    return NextResponse.json({ error: message }, { status: 400 });
   }
 }
