@@ -1,0 +1,38 @@
+import { NextResponse } from "next/server";
+import { upsertNotionEmbedBlock } from "@/lib/notion";
+import { auth, isAdminUser } from "@/lib/auth";
+
+export async function POST(req: Request, { params }: { params: Promise<{ pageId: string }> }) {
+  const session = await auth();
+  if (process.env.ADMIN_EMAIL && (!session || !isAdminUser(session.user?.email))) {
+    return NextResponse.json({ error: "Unauthorized: Admin access required" }, { status: 401 });
+  }
+
+  const { pageId } = await params;
+
+  try {
+    const body = await req.json();
+    const { diagramId } = body;
+
+    if (!diagramId) {
+      return NextResponse.json({ error: "Missing diagramId" }, { status: 400 });
+    }
+
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+    const embedUrl = `${baseUrl}/embed/${diagramId}`;
+
+    const result = await upsertNotionEmbedBlock(pageId, embedUrl);
+
+    return NextResponse.json(
+      {
+        success: true,
+        action: result.action,
+        blockId: result.blockId,
+        embedUrl,
+      },
+      { status: 200 }
+    );
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message || "Failed to sync embed to Notion" }, { status: 502 });
+  }
+}
