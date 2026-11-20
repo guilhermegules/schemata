@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { diagramService } from "@/lib/diagram-service";
 import { getNotionPageDetail, updateNotionPageContent } from "@/lib/notion";
+import type { NotionUpdateBlockItem, NotionUpdatePagePayload } from "@/types/notion";
 
 export async function GET(_req: Request, { params }: { params: Promise<{ pageId: string }> }) {
   const { pageId } = await params;
@@ -26,12 +27,35 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ pageId
   const { pageId } = await params;
 
   try {
-    const body = (await req.json()) as {
-      title?: string;
-      blocks?: Array<{ id: string; type: string; content: string }>;
+    const body = (await req.json()) as unknown;
+    if (typeof body !== "object" || body === null) {
+      return NextResponse.json(
+        { error: "Invalid request payload: must be an object" },
+        { status: 400 }
+      );
+    }
+
+    const payload = body as {
+      title?: unknown;
+      blocks?: unknown;
     };
 
-    const result = await updateNotionPageContent(pageId, body);
+    if (payload.title !== undefined && typeof payload.title !== "string") {
+      return NextResponse.json({ error: "Invalid title: must be a string" }, { status: 400 });
+    }
+
+    if (payload.blocks !== undefined && !Array.isArray(payload.blocks)) {
+      return NextResponse.json({ error: "Invalid blocks: must be an array" }, { status: 400 });
+    }
+
+    const validatedPayload: NotionUpdatePagePayload = {
+      ...(typeof payload.title === "string" ? { title: payload.title } : {}),
+      ...(Array.isArray(payload.blocks)
+        ? { blocks: payload.blocks as NotionUpdateBlockItem[] }
+        : {}),
+    };
+
+    const result = await updateNotionPageContent(pageId, validatedPayload);
 
     return NextResponse.json(
       {

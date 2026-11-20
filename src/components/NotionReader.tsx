@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import type { NotionBlockItem, NotionPageDetail } from "@/types/notion";
 
@@ -18,11 +18,20 @@ export function NotionReader({ pageDetail, diagramId, onCollapse }: NotionReader
   const [editTitle, setEditTitle] = useState<string>(pageDetail.page.title);
   const [blocks, setBlocks] = useState<NotionBlockItem[]>(pageDetail.blocks);
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     setEditTitle(pageDetail.page.title);
     setBlocks(pageDetail.blocks);
   }, [pageDetail]);
+
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+      }
+    };
+  }, []);
 
   const handleSyncToNotion = async () => {
     if (!diagramId) return;
@@ -44,7 +53,9 @@ export function NotionReader({ pageDetail, diagramId, onCollapse }: NotionReader
       const data = await res.json();
       setSyncStatus("synced");
       setSyncMessage(`Embed ${data.action} successfully on Notion page.`);
-      setTimeout(() => setSyncStatus("idle"), 4000);
+
+      if (timerRef.current) clearTimeout(timerRef.current);
+      timerRef.current = setTimeout(() => setSyncStatus("idle"), 4000);
     } catch {
       setSyncStatus("error");
       setSyncMessage("Error syncing embed to Notion.");
@@ -76,7 +87,9 @@ export function NotionReader({ pageDetail, diagramId, onCollapse }: NotionReader
       setSaveStatus("saved");
       setIsEditing(false);
       setSyncMessage("Page content updated successfully.");
-      setTimeout(() => setSyncMessage(""), 4000);
+
+      if (timerRef.current) clearTimeout(timerRef.current);
+      timerRef.current = setTimeout(() => setSyncMessage(""), 4000);
     } catch {
       setSaveStatus("error");
       setSyncMessage("Error updating page content.");
@@ -91,7 +104,6 @@ export function NotionReader({ pageDetail, diagramId, onCollapse }: NotionReader
 
   return (
     <div className="flex h-full flex-col bg-zinc-50 dark:bg-zinc-900 border-r border-zinc-200 dark:border-zinc-800">
-      {/* Top Header Bar */}
       <div className="flex items-center justify-between border-b border-zinc-200 dark:border-zinc-800 px-4 py-2.5 bg-white dark:bg-zinc-950 gap-2">
         <div className="flex items-center gap-2 overflow-hidden flex-1 min-w-0">
           <span className="text-lg flex-shrink-0">{pageDetail.page.icon || "📄"}</span>
@@ -110,7 +122,6 @@ export function NotionReader({ pageDetail, diagramId, onCollapse }: NotionReader
           )}
         </div>
 
-        {/* Action Controls */}
         <div className="flex items-center gap-1.5 flex-shrink-0">
           <ThemeToggle />
 
@@ -188,7 +199,6 @@ export function NotionReader({ pageDetail, diagramId, onCollapse }: NotionReader
         </div>
       )}
 
-      {/* Main Blocks View / Edit View */}
       <div className="flex-1 overflow-y-auto p-6 space-y-4">
         {blocks.length === 0 ? (
           <p className="text-xs text-zinc-400">No content blocks found for this Notion page.</p>

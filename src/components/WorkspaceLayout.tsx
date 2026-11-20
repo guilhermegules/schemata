@@ -15,9 +15,9 @@ interface WorkspaceLayoutProps {
 export function WorkspaceLayout({ pageDetail, diagram }: WorkspaceLayoutProps) {
   const [splitRatio, setSplitRatio] = useState<number>(40);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(false);
+  const [isDragging, setIsDragging] = useState<boolean>(false);
   const { resolvedTheme } = useTheme();
 
-  // Keyboard shortcut: Ctrl+\ or Cmd+\ to toggle sidebar collapse
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === "\\") {
@@ -29,9 +29,31 @@ export function WorkspaceLayout({ pageDetail, diagram }: WorkspaceLayoutProps) {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
+  useEffect(() => {
+    if (!isDragging) return;
+
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      const newRatio = (moveEvent.clientX / window.innerWidth) * 100;
+      if (newRatio >= 20 && newRatio <= 70) {
+        setSplitRatio(newRatio);
+      }
+    };
+
+    const handleMouseUp = () => {
+      setIsDragging(false);
+    };
+
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
+
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, [isDragging]);
+
   return (
     <div className="relative flex h-screen w-screen overflow-hidden bg-white dark:bg-zinc-950">
-      {/* Floating Edge Trigger when Sidebar is Collapsed */}
       {isSidebarCollapsed && (
         <button
           type="button"
@@ -46,7 +68,6 @@ export function WorkspaceLayout({ pageDetail, diagram }: WorkspaceLayoutProps) {
         </button>
       )}
 
-      {/* Notion Document Sidebar Pane */}
       {!isSidebarCollapsed && (
         <>
           <div style={{ width: `${splitRatio}%` }} className="h-full flex-shrink-0">
@@ -57,30 +78,13 @@ export function WorkspaceLayout({ pageDetail, diagram }: WorkspaceLayoutProps) {
             />
           </div>
 
-          {/* Draggable Divider */}
           <div
             className="w-1.5 cursor-col-resize bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-400 dark:hover:bg-zinc-600 transition flex-shrink-0"
-            onMouseDown={(_e) => {
-              const handleMouseMove = (moveEvent: MouseEvent) => {
-                const newRatio = (moveEvent.clientX / window.innerWidth) * 100;
-                if (newRatio >= 20 && newRatio <= 70) {
-                  setSplitRatio(newRatio);
-                }
-              };
-
-              const handleMouseUp = () => {
-                window.removeEventListener("mousemove", handleMouseMove);
-                window.removeEventListener("mouseup", handleMouseUp);
-              };
-
-              window.addEventListener("mousemove", handleMouseMove);
-              window.addEventListener("mouseup", handleMouseUp);
-            }}
+            onMouseDown={() => setIsDragging(true)}
           />
         </>
       )}
 
-      {/* Excalidraw Canvas Pane */}
       <div className="h-full flex-1">
         <ExcalidrawWrapper
           diagramId={diagram.id}

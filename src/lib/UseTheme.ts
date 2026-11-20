@@ -17,17 +17,14 @@ export function useTheme(): {
   const [systemIsDark, setSystemIsDark] = useState<boolean>(false);
 
   useEffect(() => {
-    // 1. Initial read from localStorage
     const saved = localStorage.getItem(STORAGE_KEY) as ThemePreference | null;
     if (saved === "light" || saved === "dark" || saved === "system") {
       setThemePreferenceState(saved);
     }
 
-    // 2. Initial system preference
     const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
     setSystemIsDark(mediaQuery.matches);
 
-    // 3. Reactive listener for OS-level theme changes
     const handler = (e: MediaQueryListEvent) => {
       setSystemIsDark(e.matches);
     };
