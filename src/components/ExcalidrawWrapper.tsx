@@ -1,14 +1,20 @@
 "use client";
 
+import "@/lib/react-compat";
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import dynamic from "next/dynamic";
 import type { ExcalidrawElement } from "@excalidraw/excalidraw/types/element/types";
 import type { AppState, BinaryFiles } from "@excalidraw/excalidraw/types/types";
 import { AppStatePersisted } from "@/types/diagram";
 import { sanitizeAppState } from "@/lib/sanitizer";
+import { ensureReact19Compat } from "@/lib/react-compat";
 
 const Excalidraw = dynamic(
-  () => import("@excalidraw/excalidraw").then((mod) => mod.Excalidraw),
+  async () => {
+    ensureReact19Compat();
+    const mod = await import("@excalidraw/excalidraw");
+    return mod.Excalidraw;
+  },
   {
     ssr: false,
     loading: () => (
