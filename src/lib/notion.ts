@@ -1,9 +1,3 @@
-import { Client } from "@notionhq/client";
-import type {
-  BlockObjectResponse,
-  PageObjectResponse,
-  RichTextItemResponse,
-} from "@notionhq/client/build/src/api-endpoints";
 import type {
   NotionBlockItem,
   NotionPageDetail,
@@ -12,138 +6,182 @@ import type {
   NotionUpdatePageResult,
 } from "@/types/notion";
 
-function getNotionClient(): Client | null {
+const NOTION_API_BASE = "https://api.notion.com/v1";
+const NOTION_API_VERSION = "2022-06-28";
+
+interface MinimalRichTextItem {
+  plain_text?: string;
+  type?: string;
+  text?: {
+    content?: string;
+  };
+}
+
+interface RawNotionPage {
+  id: string;
+  url?: string;
+  last_edited_time?: string;
+  icon?: {
+    type?: string;
+    emoji?: string;
+  };
+  properties?: Record<
+    string,
+    {
+      type?: string;
+      title?: MinimalRichTextItem[];
+      [key: string]: unknown;
+    }
+  >;
+}
+
+interface RawNotionBlock {
+  id: string;
+  type: string;
+  has_children?: boolean;
+  paragraph?: { rich_text?: MinimalRichTextItem[] };
+  heading_1?: { rich_text?: MinimalRichTextItem[] };
+  heading_2?: { rich_text?: MinimalRichTextItem[] };
+  heading_3?: { rich_text?: MinimalRichTextItem[] };
+  bulleted_list_item?: { rich_text?: MinimalRichTextItem[] };
+  numbered_list_item?: { rich_text?: MinimalRichTextItem[] };
+  to_do?: { rich_text?: MinimalRichTextItem[] };
+  toggle?: { rich_text?: MinimalRichTextItem[] };
+  quote?: { rich_text?: MinimalRichTextItem[] };
+  callout?: { rich_text?: MinimalRichTextItem[] };
+  code?: { rich_text?: MinimalRichTextItem[] };
+  divider?: Record<string, never>;
+  embed?: { url?: string };
+  image?: {
+    type?: "file" | "external";
+    file?: { url?: string };
+    external?: { url?: string };
+  };
+}
+
+function getNotionHeaders(): Record<string, string> | null {
   const token = process.env.NOTION_TOKEN;
   if (!token) {
     return null;
   }
-  return new Client({ auth: token });
+  return {
+    Authorization: `Bearer ${token}`,
+    "Notion-Version": NOTION_API_VERSION,
+    "Content-Type": "application/json",
+  };
 }
 
-function isFullPage(item: unknown): item is PageObjectResponse {
-  return typeof item === "object" && item !== null && "properties" in item;
+function normalizeNotionId(id: string): string {
+  const clean = id.replace(/-/g, "");
+  if (clean.length === 32) {
+    return `${clean.slice(0, 8)}-${clean.slice(8, 12)}-${clean.slice(12, 16)}-${clean.slice(16, 20)}-${clean.slice(20)}`;
+  }
+  return id;
 }
-
-function isFullBlock(block: unknown): block is BlockObjectResponse {
-  return typeof block === "object" && block !== null && "type" in block;
-}
-
-export interface MinimalRichTextItem {
-  plain_text?: string;
-}
-
-export interface ParagraphBlock {
-  type: "paragraph";
-  paragraph: { rich_text?: readonly MinimalRichTextItem[] };
-}
-export interface Heading1Block {
-  type: "heading_1";
-  heading_1: { rich_text?: readonly MinimalRichTextItem[] };
-}
-export interface Heading2Block {
-  type: "heading_2";
-  heading_2: { rich_text?: readonly MinimalRichTextItem[] };
-}
-export interface Heading3Block {
-  type: "heading_3";
-  heading_3: { rich_text?: readonly MinimalRichTextItem[] };
-}
-export interface BulletedListItemBlock {
-  type: "bulleted_list_item";
-  bulleted_list_item: { rich_text?: readonly MinimalRichTextItem[] };
-}
-export interface NumberedListItemBlock {
-  type: "numbered_list_item";
-  numbered_list_item: { rich_text?: readonly MinimalRichTextItem[] };
-}
-export interface DividerBlock {
-  type: "divider";
-}
-export interface EmbedBlock {
-  type: "embed";
-  embed: { url: string };
-}
-export interface ImageBlock {
-  type: "image";
-  image: { type: "file"; file: { url: string } } | { type: "external"; external: { url: string } };
-}
-export interface FallbackBlock {
-  type: string;
-}
-
-export type MinimalBlock =
-  | ParagraphBlock
-  | Heading1Block
-  | Heading2Block
-  | Heading3Block
-  | BulletedListItemBlock
-  | NumberedListItemBlock
-  | DividerBlock
-  | EmbedBlock
-  | ImageBlock
-  | FallbackBlock;
 
 export function formatRichText(richTextArray?: readonly MinimalRichTextItem[]): string {
   if (!Array.isArray(richTextArray)) return "";
-  return richTextArray.map((t) => t.plain_text || "").join("");
+  return richTextArray.map((t) => t.plain_text || t.text?.content || "").join("");
 }
 
-export function parseBlockContent(block: MinimalBlock): { type: string; content: string } {
+export function parseBlockContent(block: RawNotionBlock): { type: string; content: string } {
   switch (block.type) {
     case "paragraph":
       return {
         type: block.type,
-        content: "paragraph" in block ? formatRichText(block.paragraph.rich_text) : "",
+        content: formatRichText(block.paragraph?.rich_text),
       };
     case "heading_1":
       return {
         type: block.type,
-        content: "heading_1" in block ? formatRichText(block.heading_1.rich_text) : "",
+        content: formatRichText(block.heading_1?.rich_text),
       };
     case "heading_2":
       return {
         type: block.type,
-        content: "heading_2" in block ? formatRichText(block.heading_2.rich_text) : "",
+        content: formatRichText(block.heading_2?.rich_text),
       };
     case "heading_3":
       return {
         type: block.type,
-        content: "heading_3" in block ? formatRichText(block.heading_3.rich_text) : "",
+        content: formatRichText(block.heading_3?.rich_text),
       };
     case "bulleted_list_item":
       return {
         type: block.type,
-        content:
-          "bulleted_list_item" in block ? formatRichText(block.bulleted_list_item.rich_text) : "",
+        content: formatRichText(block.bulleted_list_item?.rich_text),
       };
     case "numbered_list_item":
       return {
         type: block.type,
-        content:
-          "numbered_list_item" in block ? formatRichText(block.numbered_list_item.rich_text) : "",
+        content: formatRichText(block.numbered_list_item?.rich_text),
+      };
+    case "to_do":
+      return {
+        type: block.type,
+        content: formatRichText(block.to_do?.rich_text),
+      };
+    case "toggle":
+      return {
+        type: block.type,
+        content: formatRichText(block.toggle?.rich_text),
+      };
+    case "quote":
+      return {
+        type: block.type,
+        content: formatRichText(block.quote?.rich_text),
+      };
+    case "callout":
+      return {
+        type: block.type,
+        content: formatRichText(block.callout?.rich_text),
+      };
+    case "code":
+      return {
+        type: block.type,
+        content: formatRichText(block.code?.rich_text),
       };
     case "divider":
       return { type: block.type, content: "---" };
     case "embed":
-      return { type: block.type, content: "embed" in block ? block.embed.url : "" };
+      return { type: block.type, content: block.embed?.url || "" };
     case "image":
-      if ("image" in block) {
-        if (block.image.type === "file") {
-          return { type: block.type, content: block.image.file.url };
-        }
-        return { type: block.type, content: block.image.external.url };
+      if (block.image?.type === "file") {
+        return { type: block.type, content: block.image.file?.url || "" };
       }
-      return { type: block.type, content: "" };
+      return { type: block.type, content: block.image?.external?.url || "" };
     default:
       return { type: block.type, content: "" };
   }
 }
 
+function extractPageTitle(properties?: RawNotionPage["properties"]): string {
+  if (!properties) return "Untitled";
+  for (const key of Object.keys(properties)) {
+    const prop = properties[key];
+    if (prop.type === "title" && Array.isArray(prop.title) && prop.title.length > 0) {
+      return formatRichText(prop.title);
+    }
+  }
+  return "Untitled";
+}
+
+function findTitlePropertyName(properties?: RawNotionPage["properties"]): string {
+  if (!properties) return "title";
+  for (const key of Object.keys(properties)) {
+    const prop = properties[key];
+    if (prop.type === "title") {
+      return key;
+    }
+  }
+  return "title";
+}
+
 export async function listNotionDatabasePages(): Promise<NotionPageSummary[]> {
-  const client = getNotionClient();
+  const headers = getNotionHeaders();
   const databaseId = process.env.NOTION_DATABASE_ID;
 
-  if (!client || !databaseId) {
+  if (!headers || !databaseId) {
     return [
       {
         id: "mock-page-1",
@@ -162,48 +200,41 @@ export async function listNotionDatabasePages(): Promise<NotionPageSummary[]> {
     ];
   }
 
-  try {
-    const response = await client.databases.query({
-      database_id: databaseId,
-      page_size: 50,
-    });
+  const cleanDbId = normalizeNotionId(databaseId);
+  const response = await fetch(`${NOTION_API_BASE}/databases/${cleanDbId}/query`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ page_size: 50 }),
+  });
 
-    const pages: NotionPageSummary[] = [];
-
-    for (const item of response.results) {
-      if (!isFullPage(item)) continue;
-
-      let title = "Untitled";
-      for (const key of Object.keys(item.properties)) {
-        const prop = item.properties[key];
-        if (prop.type === "title" && prop.title.length > 0) {
-          title = formatRichText(prop.title as RichTextItemResponse[]);
-          break;
-        }
-      }
-
-      const iconEmoji = item.icon?.type === "emoji" ? item.icon.emoji : "📄";
-
-      pages.push({
-        id: item.id,
-        title,
-        icon: iconEmoji,
-        lastEditedTime: item.last_edited_time,
-        url: item.url,
-      });
-    }
-
-    return pages;
-  } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : "Database query failed";
-    throw new Error(`Failed to query Notion database: ${message}`);
+  if (!response.ok) {
+    const errorBody = await response.text();
+    throw new Error(`Failed to query Notion database: HTTP ${response.status} - ${errorBody}`);
   }
+
+  const data = (await response.json()) as { results?: RawNotionPage[] };
+  const pages: NotionPageSummary[] = [];
+
+  for (const item of data.results || []) {
+    const title = extractPageTitle(item.properties);
+    const iconEmoji = item.icon?.type === "emoji" ? item.icon.emoji : "📄";
+
+    pages.push({
+      id: item.id,
+      title,
+      icon: iconEmoji,
+      lastEditedTime: item.last_edited_time || new Date().toISOString(),
+      url: item.url || `https://notion.so/${item.id}`,
+    });
+  }
+
+  return pages;
 }
 
 export async function getNotionPageDetail(pageId: string): Promise<NotionPageDetail> {
-  const client = getNotionClient();
+  const headers = getNotionHeaders();
 
-  if (!client) {
+  if (!headers) {
     return {
       page: {
         id: pageId,
@@ -238,42 +269,48 @@ export async function getNotionPageDetail(pageId: string): Promise<NotionPageDet
     };
   }
 
-  const [rawPage, blocksResponse] = await Promise.all([
-    client.pages.retrieve({ page_id: pageId }),
-    client.blocks.children.list({ block_id: pageId, page_size: 100 }),
+  const cleanPageId = normalizeNotionId(pageId);
+
+  const [pageRes, blocksRes] = await Promise.all([
+    fetch(`${NOTION_API_BASE}/pages/${cleanPageId}`, {
+      method: "GET",
+      headers,
+    }),
+    fetch(`${NOTION_API_BASE}/blocks/${cleanPageId}/children?page_size=100`, {
+      method: "GET",
+      headers,
+    }),
   ]);
 
-  let title = "Untitled";
-  let iconEmoji = "📄";
-  let pageUrl = `https://notion.so/${pageId}`;
-  let lastEditedTime = new Date().toISOString();
-
-  if (isFullPage(rawPage)) {
-    pageUrl = rawPage.url;
-    lastEditedTime = rawPage.last_edited_time;
-    if (rawPage.icon?.type === "emoji") {
-      iconEmoji = rawPage.icon.emoji;
-    }
-    for (const key of Object.keys(rawPage.properties)) {
-      const prop = rawPage.properties[key];
-      if (prop.type === "title" && prop.title.length > 0) {
-        title = formatRichText(prop.title as RichTextItemResponse[]);
-        break;
-      }
-    }
+  if (!pageRes.ok) {
+    const errorText = await pageRes.text();
+    throw new Error(`Failed to retrieve Notion page: HTTP ${pageRes.status} - ${errorText}`);
   }
 
+  if (!blocksRes.ok) {
+    const errorText = await blocksRes.text();
+    throw new Error(
+      `Failed to retrieve Notion block children: HTTP ${blocksRes.status} - ${errorText}`
+    );
+  }
+
+  const rawPage = (await pageRes.json()) as RawNotionPage;
+  const blocksData = (await blocksRes.json()) as { results?: RawNotionBlock[] };
+
+  const title = extractPageTitle(rawPage.properties);
+  const iconEmoji = rawPage.icon?.type === "emoji" ? rawPage.icon.emoji : "📄";
+  const pageUrl = rawPage.url || `https://notion.so/${cleanPageId}`;
+  const lastEditedTime = rawPage.last_edited_time || new Date().toISOString();
+
   const blocks: NotionBlockItem[] = [];
-  for (const b of blocksResponse.results) {
-    if (isFullBlock(b)) {
-      const { type, content } = parseBlockContent(b);
-      blocks.push({
-        id: b.id,
-        type,
-        content,
-        hasChildren: b.has_children,
-      });
-    }
+  for (const b of blocksData.results || []) {
+    const { type, content } = parseBlockContent(b);
+    blocks.push({
+      id: b.id,
+      type,
+      content,
+      hasChildren: Boolean(b.has_children),
+    });
   }
 
   return {
@@ -292,115 +329,157 @@ export async function upsertNotionEmbedBlock(
   pageId: string,
   embedUrl: string
 ): Promise<{ action: "updated" | "appended"; blockId: string }> {
-  const client = getNotionClient();
-  if (!client) {
+  const headers = getNotionHeaders();
+  if (!headers) {
     return { action: "appended", blockId: "mock-embed-block-id" };
   }
 
-  const children = await client.blocks.children.list({ block_id: pageId, page_size: 100 });
-  const existingEmbed = children.results.find((b) => {
+  const cleanPageId = normalizeNotionId(pageId);
+  const listRes = await fetch(`${NOTION_API_BASE}/blocks/${cleanPageId}/children?page_size=100`, {
+    method: "GET",
+    headers,
+  });
+
+  if (!listRes.ok) {
+    const errText = await listRes.text();
+    throw new Error(
+      `Failed to list block children for embed upsert: HTTP ${listRes.status} - ${errText}`
+    );
+  }
+
+  const listData = (await listRes.json()) as { results?: RawNotionBlock[] };
+  const existingEmbed = (listData.results || []).find((b) => {
     return (
-      isFullBlock(b) &&
       b.type === "embed" &&
-      (b.embed.url.includes("/embed/") || b.embed.url === embedUrl)
+      Boolean(b.embed?.url && (b.embed.url.includes("/embed/") || b.embed.url === embedUrl))
     );
   });
 
-  if (existingEmbed && isFullBlock(existingEmbed)) {
-    await client.blocks.update({
-      block_id: existingEmbed.id,
-      embed: { url: embedUrl },
+  if (existingEmbed) {
+    const updateRes = await fetch(`${NOTION_API_BASE}/blocks/${existingEmbed.id}`, {
+      method: "PATCH",
+      headers,
+      body: JSON.stringify({
+        embed: { url: embedUrl },
+      }),
     });
+
+    if (!updateRes.ok) {
+      const errText = await updateRes.text();
+      throw new Error(`Failed to update Notion embed block: HTTP ${updateRes.status} - ${errText}`);
+    }
+
     return { action: "updated", blockId: existingEmbed.id };
   }
 
-  const appendResponse = await client.blocks.children.append({
-    block_id: pageId,
-    children: [
-      {
-        object: "block",
-        type: "embed",
-        embed: {
-          url: embedUrl,
+  const appendRes = await fetch(`${NOTION_API_BASE}/blocks/${cleanPageId}/children`, {
+    method: "PATCH",
+    headers,
+    body: JSON.stringify({
+      children: [
+        {
+          object: "block",
+          type: "embed",
+          embed: {
+            url: embedUrl,
+          },
         },
-      },
-    ],
+      ],
+    }),
   });
 
-  const createdBlock = appendResponse.results[0];
-  return { action: "appended", blockId: createdBlock.id };
+  if (!appendRes.ok) {
+    const errText = await appendRes.text();
+    throw new Error(`Failed to append Notion embed block: HTTP ${appendRes.status} - ${errText}`);
+  }
+
+  const appendData = (await appendRes.json()) as { results?: Array<{ id: string }> };
+  const createdBlock = appendData.results?.[0];
+
+  return { action: "appended", blockId: createdBlock?.id || "appended-block-id" };
 }
 
 export async function updateNotionPageContent(
   pageId: string,
   updates: NotionUpdatePagePayload
 ): Promise<NotionUpdatePageResult> {
-  const client = getNotionClient();
-  if (!client) {
+  const headers = getNotionHeaders();
+  if (!headers) {
     return {
       updatedTitle: updates.title,
       updatedBlockCount: updates.blocks?.length || 0,
     };
   }
 
+  const cleanPageId = normalizeNotionId(pageId);
   let updatedTitle: string | undefined;
 
   if (updates.title !== undefined) {
-    await client.pages.update({
-      page_id: pageId,
-      properties: {
-        title: {
-          title: [{ type: "text", text: { content: updates.title } }],
-        },
-      },
+    const pageRes = await fetch(`${NOTION_API_BASE}/pages/${cleanPageId}`, {
+      method: "GET",
+      headers,
     });
+
+    let titlePropName = "title";
+    if (pageRes.ok) {
+      const pageData = (await pageRes.json()) as RawNotionPage;
+      titlePropName = findTitlePropertyName(pageData.properties);
+    }
+
+    const patchPageRes = await fetch(`${NOTION_API_BASE}/pages/${cleanPageId}`, {
+      method: "PATCH",
+      headers,
+      body: JSON.stringify({
+        properties: {
+          [titlePropName]: {
+            title: [{ type: "text", text: { content: updates.title } }],
+          },
+        },
+      }),
+    });
+
+    if (!patchPageRes.ok) {
+      const errText = await patchPageRes.text();
+      throw new Error(
+        `Failed to update Notion page title: HTTP ${patchPageRes.status} - ${errText}`
+      );
+    }
+
     updatedTitle = updates.title;
   }
 
   let updatedBlockCount = 0;
   if (Array.isArray(updates.blocks)) {
     for (const b of updates.blocks) {
-      const richText = [{ type: "text" as const, text: { content: b.content } }];
-      try {
-        if (b.type === "paragraph") {
-          await client.blocks.update({
-            block_id: b.id,
-            paragraph: { rich_text: richText },
-          });
-          updatedBlockCount++;
-        } else if (b.type === "heading_1") {
-          await client.blocks.update({
-            block_id: b.id,
-            heading_1: { rich_text: richText },
-          });
-          updatedBlockCount++;
-        } else if (b.type === "heading_2") {
-          await client.blocks.update({
-            block_id: b.id,
-            heading_2: { rich_text: richText },
-          });
-          updatedBlockCount++;
-        } else if (b.type === "heading_3") {
-          await client.blocks.update({
-            block_id: b.id,
-            heading_3: { rich_text: richText },
-          });
-          updatedBlockCount++;
-        } else if (b.type === "bulleted_list_item") {
-          await client.blocks.update({
-            block_id: b.id,
-            bulleted_list_item: { rich_text: richText },
-          });
-          updatedBlockCount++;
-        } else if (b.type === "numbered_list_item") {
-          await client.blocks.update({
-            block_id: b.id,
-            numbered_list_item: { rich_text: richText },
-          });
-          updatedBlockCount++;
-        }
-      } catch (err) {
-        console.warn(`Failed to update block ${b.id}:`, err);
+      const richText = [{ type: "text", text: { content: b.content } }];
+      const allowedTextTypes = [
+        "paragraph",
+        "heading_1",
+        "heading_2",
+        "heading_3",
+        "bulleted_list_item",
+        "numbered_list_item",
+        "to_do",
+        "toggle",
+        "quote",
+        "callout",
+        "code",
+      ];
+
+      if (!allowedTextTypes.includes(b.type)) {
+        continue;
+      }
+
+      const updateBlockRes = await fetch(`${NOTION_API_BASE}/blocks/${b.id}`, {
+        method: "PATCH",
+        headers,
+        body: JSON.stringify({
+          [b.type]: { rich_text: richText },
+        }),
+      });
+
+      if (updateBlockRes.ok) {
+        updatedBlockCount++;
       }
     }
   }
