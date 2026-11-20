@@ -38,7 +38,11 @@ describe("React 19 Compatibility Shim", () => {
     // Act
     const owner = sharedInternals.ReactCurrentOwner as { current: unknown } | undefined;
     const debugFrame = sharedInternals.ReactDebugCurrentFrame as
-      | { getStackAddendum?: () => string }
+      | {
+          getStackAddendum?: () => string;
+          setExtraStackFrame?: (stack: string | null) => void;
+          getCurrentStack?: () => string;
+        }
       | undefined;
 
     // Assert
@@ -46,6 +50,13 @@ describe("React 19 Compatibility Shim", () => {
     expect(owner).toHaveProperty("current");
     expect(debugFrame).toBeDefined();
     expect(typeof debugFrame?.getStackAddendum).toBe("function");
+    expect(typeof debugFrame?.setExtraStackFrame).toBe("function");
+    expect(typeof debugFrame?.getCurrentStack).toBe("function");
+    expect(debugFrame?.getStackAddendum?.()).toBe("");
+
+    debugFrame?.setExtraStackFrame?.("\n    in TestComponent");
+    expect(debugFrame?.getStackAddendum?.()).toBe("\n    in TestComponent");
+    debugFrame?.setExtraStackFrame?.(null);
     expect(debugFrame?.getStackAddendum?.()).toBe("");
   });
 

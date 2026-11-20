@@ -47,13 +47,20 @@ export function ensureReact19Compat(): void {
       });
     }
 
-    if (!clientInternals.ReactDebugCurrentFrame) {
-      clientInternals.ReactDebugCurrentFrame = {
-        getStackAddendum(): string {
-          return "";
-        },
+    let extraStack: string | null = null;
+    const debugFrame = (clientInternals.ReactDebugCurrentFrame || {}) as Record<string, unknown>;
+    if (typeof debugFrame.setExtraStackFrame !== "function") {
+      debugFrame.setExtraStackFrame = (stack: string | null): void => {
+        extraStack = stack;
       };
     }
+    if (typeof debugFrame.getStackAddendum !== "function") {
+      debugFrame.getStackAddendum = (): string => extraStack || "";
+    }
+    if (typeof debugFrame.getCurrentStack !== "function") {
+      debugFrame.getCurrentStack = (): string => "";
+    }
+    clientInternals.ReactDebugCurrentFrame = debugFrame;
 
     if (!clientInternals.ReactCurrentBatchConfig) {
       Object.defineProperty(clientInternals, "ReactCurrentBatchConfig", {
