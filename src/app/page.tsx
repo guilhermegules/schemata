@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { diagramService } from "@/lib/diagram_service";
+import { ThemeToggle } from "@/components/ThemeToggle";
+import { diagramService } from "@/lib/diagram-service";
 import { listNotionDatabasePages } from "@/lib/notion";
 
 export default async function DashboardPage() {
@@ -18,13 +19,14 @@ export default async function DashboardPage() {
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 p-8">
       <div className="mx-auto max-w-5xl">
-        <header className="mb-8 border-b border-zinc-200 dark:border-zinc-800 pb-4">
+        <header className="mb-8 flex items-center justify-between border-b border-zinc-200 dark:border-zinc-800 pb-4">
           <div>
             <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">Schemata</h1>
             <p className="text-sm text-zinc-500">
               Personal Architecture Documentation & Diagram Studio
             </p>
           </div>
+          <ThemeToggle />
         </header>
 
         <section>
