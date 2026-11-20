@@ -72,6 +72,20 @@ export function ensureReact19Compat(): void {
     }
   }
 
+  const origSymbolFor = Symbol.for;
+  const transitionalSymbol = origSymbolFor("react.transitional.element");
+  const symbolAny = Symbol as unknown as Record<string, unknown>;
+
+  if (!symbolAny.__react19ElementBridged) {
+    symbolAny.__react19ElementBridged = true;
+    Symbol.for = function (key: string): symbol {
+      if (key === "react.element") {
+        return transitionalSymbol;
+      }
+      return origSymbolFor.call(Symbol, key);
+    };
+  }
+
   if (typeof window !== "undefined") {
     const winAny = window as unknown as Record<string, unknown>;
     if (!winAny.React) {

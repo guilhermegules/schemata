@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import React from "react";
+import ReactDOMServer from "react-dom/server";
 import { ensureReact19Compat } from "@/lib/react-compat";
 
 describe("React 19 Compatibility Shim", () => {
@@ -59,5 +60,33 @@ describe("React 19 Compatibility Shim", () => {
     // Assert
     expect(dispatcher.current).toBe(mockDispatcher);
     expect(sharedInternals.H).toBe(mockDispatcher);
+  });
+
+  it("test_should_bridge_react_element_symbol_to_transitional_element", () => {
+    // Arrange & Act
+    const elementSymbol = Symbol.for("react.element");
+    const otherSymbol = Symbol.for("react.fragment");
+
+    // Assert
+    expect(elementSymbol.toString()).toBe("Symbol(react.transitional.element)");
+    expect(otherSymbol.toString()).toBe("Symbol(react.fragment)");
+  });
+
+  it("test_should_render_bridged_element_through_react_reconciler_without_legacy_error", () => {
+    // Arrange
+    const bridgedElement = {
+      $$typeof: Symbol.for("react.element"),
+      type: "div",
+      key: null,
+      ref: null,
+      props: { id: "test-canvas-container", children: "Canvas Content" },
+      _owner: null,
+    };
+
+    // Act
+    const html = ReactDOMServer.renderToString(bridgedElement as unknown as React.ReactElement);
+
+    // Assert
+    expect(html).toBe('<div id="test-canvas-container">Canvas Content</div>');
   });
 });
