@@ -86,6 +86,57 @@ export function ensureReact19Compat(): void {
     };
   }
 
+  const globalAny = globalThis as unknown as Record<string, unknown>;
+  if (!globalAny.__react19RefBridged) {
+    globalAny.__react19RefBridged = true;
+
+    const origHasOwnProperty = Object.prototype.hasOwnProperty;
+    Object.prototype.hasOwnProperty = function (prop: PropertyKey): boolean {
+      if (
+        prop === "ref" &&
+        this &&
+        (this as Record<string, unknown>).key === true &&
+        (this as Record<string, unknown>).ref === true &&
+        (this as Record<string, unknown>).__self === true
+      ) {
+        return false;
+      }
+      return origHasOwnProperty.call(this, prop);
+    };
+
+    const origDefineProperty = Object.defineProperty;
+    Object.defineProperty = function <T>(
+      obj: T,
+      prop: PropertyKey,
+      descriptor: PropertyDescriptor & ThisType<unknown>
+    ): T {
+      if (
+        prop === "ref" &&
+        descriptor &&
+        descriptor.get &&
+        (descriptor.get as unknown as { isReactWarning?: boolean }).isReactWarning
+      ) {
+        return obj;
+      }
+
+      if (prop === "_self" && obj && (obj as Record<string, unknown>).props) {
+        const elem = obj as Record<string, unknown>;
+        if (elem.ref !== undefined) {
+          try {
+            origDefineProperty.call(Object, elem.props, "ref", {
+              value: elem.ref,
+              writable: true,
+              enumerable: true,
+              configurable: true,
+            });
+          } catch {}
+        }
+      }
+
+      return origDefineProperty.call(Object, obj, prop, descriptor) as T;
+    };
+  }
+
   if (typeof window !== "undefined") {
     const winAny = window as unknown as Record<string, unknown>;
     if (!winAny.React) {

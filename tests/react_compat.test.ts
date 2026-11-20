@@ -89,4 +89,55 @@ describe("React 19 Compatibility Shim", () => {
     // Assert
     expect(html).toBe('<div id="test-canvas-container">Canvas Content</div>');
   });
+
+  it("test_should_preserve_ref_on_props_when_simulating_react18_jsx_runtime", () => {
+    // Arrange
+    const reservedProps = { key: true, ref: true, __self: true, __source: true };
+    const config = { id: "canvas-ref-test", ref: { current: "mock-dom-node" } };
+    const props: Record<string, unknown> = {};
+
+    // Act: Simulate React 18 JSX runtime property filtering
+    for (const prop in config) {
+      if (Object.prototype.hasOwnProperty.call(config, prop) && !reservedProps.hasOwnProperty(prop)) {
+        props[prop] = (config as Record<string, unknown>)[prop];
+      }
+    }
+
+    // Simulate React 18 defineRefPropWarningGetter attempt
+    const warningFn = () => undefined;
+    (warningFn as unknown as { isReactWarning: boolean }).isReactWarning = true;
+    Object.defineProperty(props, "ref", {
+      get: warningFn,
+      configurable: true,
+    });
+
+    // Assert
+    expect(props).toHaveProperty("ref");
+    expect(props.ref).toEqual({ current: "mock-dom-node" });
+  });
+
+  it("test_should_attach_ref_to_props_via_element_self_construction", () => {
+    // Arrange
+    const mockRef = { current: "canvas-container-node" };
+    const props: Record<string, unknown> = { id: "excalidraw-container" };
+    const element = {
+      $$typeof: Symbol.for("react.element"),
+      type: "div",
+      key: null,
+      ref: mockRef,
+      props,
+      _owner: null,
+    };
+
+    // Act: Simulate React 18 ReactElement initialization (_self assignment)
+    Object.defineProperty(element, "_self", {
+      configurable: false,
+      enumerable: false,
+      writable: false,
+      value: null,
+    });
+
+    // Assert: In React 19, coerceRef reads element.props.ref
+    expect(element.props.ref).toBe(mockRef);
+  });
 });
