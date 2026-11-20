@@ -1,0 +1,6 @@
+id: no-delete-process-env
+language: typescript
+rule:
+  pattern: delete process.env.$PROP
+message: "Do not delete process.env properties. Assign (process.env as any).$PROP = 'value' instead to avoid TS2704 read-only errors."
+severity: error
