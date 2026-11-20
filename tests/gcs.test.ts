@@ -1,11 +1,7 @@
-import { describe, it, expect, beforeEach } from "vitest";
-import { uploadBinaryAsset, getBinaryAsset } from "@/lib/gcs";
+import { describe, expect, it } from "vitest";
+import { getBinaryAsset, uploadBinaryAsset } from "@/lib/gcs";
 
 describe("Google Cloud Storage Client (with local memory fallback)", () => {
-  beforeEach(() => {
-    delete process.env.NODE_ENV;
-  });
-
   it("should upload binary asset buffer and return valid metadata", async () => {
     // Arrange
     const sampleBuffer = Buffer.from("fake-png-binary-data");

@@ -4,7 +4,7 @@ import {
   getDiagramByNotionPageId,
   updateDiagram,
 } from "@/lib/firestore";
-import { DiagramDocument, DiagramCreateInput, DiagramUpdateInput } from "@/types/diagram";
+import type { DiagramCreateInput, DiagramDocument, DiagramUpdateInput } from "@/types/diagram";
 
 export class DiagramService {
   async getById(id: string): Promise<DiagramDocument | null> {

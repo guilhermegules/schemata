@@ -1,7 +1,7 @@
 import { Firestore } from "@google-cloud/firestore";
-import { DiagramDocument, DiagramCreateInput, DiagramUpdateInput } from "@/types/diagram";
-import { sanitizeAppState } from "@/lib/sanitizer";
 import crypto from "crypto";
+import { sanitizeAppState } from "@/lib/sanitizer";
+import type { DiagramCreateInput, DiagramDocument, DiagramUpdateInput } from "@/types/diagram";
 
 const memoryDb = new Map<string, DiagramDocument>();
 
@@ -54,7 +54,9 @@ export async function getDiagramById(id: string): Promise<DiagramDocument | null
   return memoryDb.get(id) || null;
 }
 
-export async function getDiagramByNotionPageId(notionPageId: string): Promise<DiagramDocument | null> {
+export async function getDiagramByNotionPageId(
+  notionPageId: string
+): Promise<DiagramDocument | null> {
   const firestore = getFirestoreClient();
   if (firestore && process.env.NODE_ENV === "production") {
     const query = await firestore
@@ -74,7 +76,10 @@ export async function getDiagramByNotionPageId(notionPageId: string): Promise<Di
   return null;
 }
 
-export async function updateDiagram(id: string, input: DiagramUpdateInput): Promise<DiagramDocument | null> {
+export async function updateDiagram(
+  id: string,
+  input: DiagramUpdateInput
+): Promise<DiagramDocument | null> {
   const existing = await getDiagramById(id);
   if (!existing) return null;
 
@@ -83,7 +88,9 @@ export async function updateDiagram(id: string, input: DiagramUpdateInput): Prom
     ...existing,
     title: input.title ?? existing.title,
     elements: input.elements ?? existing.elements,
-    appState: input.appState ? sanitizeAppState({ ...existing.appState, ...input.appState }) : existing.appState,
+    appState: input.appState
+      ? sanitizeAppState({ ...existing.appState, ...input.appState })
+      : existing.appState,
     fileRefs: input.fileRefs ? { ...existing.fileRefs, ...input.fileRefs } : existing.fileRefs,
     updatedAt: now,
   };

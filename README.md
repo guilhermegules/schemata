@@ -22,11 +22,13 @@
 ### 1. Environment Configuration
 
 Copy `.env.example` to `.env`:
+
 ```bash
 cp .env.example .env
 ```
 
 Fill in the required variables:
+
 - `NOTION_TOKEN`: Notion Internal Integration Secret
 - `NOTION_DATABASE_ID`: Target database storing architecture notes
 - `GCP_PROJECT_ID`: Google Cloud Platform Project ID
@@ -55,6 +57,7 @@ Visit [http://localhost:3000](http://localhost:3000).
 ## ☁️ GCP Deployment (Cloud Run)
 
 Ensure `gcloud` CLI is logged in and configured:
+
 ```bash
 chmod +x scripts/deploy-gcp.sh
 ./scripts/deploy-gcp.sh

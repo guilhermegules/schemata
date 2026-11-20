@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { upsertNotionEmbedBlock } from "@/lib/notion";
 import { auth, isAdminUser } from "@/lib/auth";
+import { upsertNotionEmbedBlock } from "@/lib/notion";
 
 export async function POST(req: Request, { params }: { params: Promise<{ pageId: string }> }) {
   const session = await auth();
@@ -32,7 +32,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ pageId:
       },
       { status: 200 }
     );
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message || "Failed to sync embed to Notion" }, { status: 502 });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Failed to sync embed to Notion";
+    return NextResponse.json({ error: message }, { status: 502 });
   }
 }

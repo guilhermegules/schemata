@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { diagramService } from "@/lib/diagram_service";
 import { auth, isAdminUser } from "@/lib/auth";
+import { diagramService } from "@/lib/diagram-service";
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -29,7 +29,8 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     }
 
     return NextResponse.json(updated, { status: 200 });
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message || "Failed to update diagram" }, { status: 400 });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Failed to update diagram";
+    return NextResponse.json({ error: message }, { status: 400 });
   }
 }

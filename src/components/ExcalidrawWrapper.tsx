@@ -1,19 +1,35 @@
 "use client";
 
-import React, { useEffect, useRef, useState, useCallback } from "react";
+import "@excalidraw/excalidraw/index.css";
+import "@/lib/react-compat";
+import type { ExcalidrawElement } from "@excalidraw/excalidraw/element/types";
+import type { AppState, BinaryFiles } from "@excalidraw/excalidraw/types";
 import dynamic from "next/dynamic";
-import { AppStatePersisted } from "@/types/diagram";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { ensureReact19Compat } from "@/lib/react-compat";
 import { sanitizeAppState } from "@/lib/sanitizer";
+import type { AppStatePersisted } from "@/types/diagram";
 
 const Excalidraw = dynamic(
-  () => import("@excalidraw/excalidraw").then((mod) => mod.Excalidraw),
+  async () => {
+    ensureReact19Compat();
+    const mod = await import("@excalidraw/excalidraw");
+    return mod.Excalidraw;
+  },
   {
     ssr: false,
     loading: () => (
       <div className="flex h-full w-full items-center justify-center bg-zinc-50 dark:bg-zinc-900 text-zinc-500 text-sm">
         <div className="flex items-center gap-2">
           <svg className="animate-spin h-5 w-5 text-zinc-500" viewBox="0 0 24 24" fill="none">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+            <circle
+              className="opacity-25"
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              strokeWidth="4"
+            />
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
           </svg>
           Loading Canvas...
@@ -25,7 +41,7 @@ const Excalidraw = dynamic(
 
 interface ExcalidrawWrapperProps {
   diagramId: string;
-  initialElements?: readonly any[];
+  initialElements?: readonly ExcalidrawElement[];
   initialAppState?: Partial<AppStatePersisted>;
   isReadOnly?: boolean;
 }
@@ -38,18 +54,23 @@ export function ExcalidrawWrapper({
 }: ExcalidrawWrapperProps) {
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const latestDataRef = useRef<{ elements: readonly any[]; appState: any }>({
+  const latestDataRef = useRef<{
+    elements: readonly ExcalidrawElement[];
+    appState: Partial<AppState>;
+  }>({
     elements: initialElements,
-    appState: initialAppState || {},
+    appState: (initialAppState
+      ? { ...initialAppState, gridSize: initialAppState.gridSize ?? undefined }
+      : {}) as Partial<AppState>,
   });
   const hasPendingChangesRef = useRef<boolean>(false);
 
   const saveDiagram = useCallback(
-    async (elements: readonly any[], appState: any) => {
+    async (elements: readonly ExcalidrawElement[], appState: Partial<AppState>) => {
       if (isReadOnly) return;
       setSaveStatus("saving");
 
-      const sanitizedState = sanitizeAppState(appState);
+      const sanitizedState = sanitizeAppState(appState as Record<string, unknown>);
       const payload = {
         elements,
         appState: sanitizedState,
@@ -79,7 +100,7 @@ export function ExcalidrawWrapper({
   const flushViaBeacon = useCallback(() => {
     if (!hasPendingChangesRef.current || isReadOnly) return;
     const { elements, appState } = latestDataRef.current;
-    const sanitizedState = sanitizeAppState(appState);
+    const sanitizedState = sanitizeAppState(appState as Record<string, unknown>);
     const payload = JSON.stringify({
       elements,
       appState: sanitizedState,
@@ -113,7 +134,11 @@ export function ExcalidrawWrapper({
     };
   }, [flushViaBeacon]);
 
-  const handleChange = (elements: readonly any[], appState: any) => {
+  const handleChange = (
+    elements: readonly ExcalidrawElement[],
+    appState: AppState,
+    _files: BinaryFiles
+  ) => {
     if (isReadOnly) return;
 
     latestDataRef.current = { elements, appState };
@@ -127,6 +152,10 @@ export function ExcalidrawWrapper({
       saveDiagram(elements, appState);
     }, 2000);
   };
+
+  const initialSanitizedState = sanitizeAppState(
+    initialAppState as Record<string, unknown> | undefined
+  );
 
   return (
     <div className="relative h-full w-full">
@@ -159,7 +188,10 @@ export function ExcalidrawWrapper({
       <Excalidraw
         initialData={{
           elements: initialElements,
-          appState: sanitizeAppState(initialAppState) as any,
+          appState: {
+            ...initialSanitizedState,
+            gridSize: initialSanitizedState.gridSize ?? undefined,
+          },
         }}
         onChange={handleChange}
         viewModeEnabled={isReadOnly}

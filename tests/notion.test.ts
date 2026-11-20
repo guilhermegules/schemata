@@ -1,13 +1,10 @@
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 import { formatRichText, parseBlockContent } from "@/lib/notion";
 
 describe("Notion SDK Client Utilities", () => {
   it("should extract plain text from rich_text array", () => {
     // Arrange
-    const richText = [
-      { plain_text: "System " },
-      { plain_text: "Architecture" },
-    ];
+    const richText = [{ plain_text: "System " }, { plain_text: "Architecture" }];
 
     // Act
     const result = formatRichText(richText);

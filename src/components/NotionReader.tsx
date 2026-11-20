@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
-import { NotionPageDetail } from "@/types/notion";
+import { useState } from "react";
+import type { NotionPageDetail } from "@/types/notion";
 
 interface NotionReaderProps {
   pageDetail: NotionPageDetail;
@@ -50,6 +50,7 @@ export function NotionReader({ pageDetail, diagramId }: NotionReaderProps) {
         </div>
         {diagramId && (
           <button
+            type="button"
             onClick={handleSyncToNotion}
             disabled={syncStatus === "syncing"}
             className="flex items-center gap-1.5 rounded-md bg-zinc-900 dark:bg-zinc-100 px-3 py-1.5 text-xs font-medium text-white dark:text-zinc-900 hover:bg-zinc-800 dark:hover:bg-zinc-200 disabled:opacity-50 transition"
@@ -76,24 +77,39 @@ export function NotionReader({ pageDetail, diagramId }: NotionReaderProps) {
           <p className="text-xs text-zinc-400">No content blocks found for this Notion page.</p>
         ) : (
           pageDetail.blocks.map((block) => (
-            <div key={block.id} className="text-sm leading-relaxed text-zinc-800 dark:text-zinc-200">
+            <div
+              key={block.id}
+              className="text-sm leading-relaxed text-zinc-800 dark:text-zinc-200"
+            >
               {block.type === "heading_1" && (
-                <h1 className="text-xl font-bold text-zinc-950 dark:text-zinc-50 pt-2">{block.content}</h1>
+                <h1 className="text-xl font-bold text-zinc-950 dark:text-zinc-50 pt-2">
+                  {block.content}
+                </h1>
               )}
               {block.type === "heading_2" && (
-                <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 pt-1.5">{block.content}</h2>
+                <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 pt-1.5">
+                  {block.content}
+                </h2>
               )}
               {block.type === "heading_3" && (
-                <h3 className="text-base font-medium text-zinc-900 dark:text-zinc-100">{block.content}</h3>
+                <h3 className="text-base font-medium text-zinc-900 dark:text-zinc-100">
+                  {block.content}
+                </h3>
               )}
-              {block.type === "paragraph" && <p className="text-zinc-700 dark:text-zinc-300">{block.content}</p>}
+              {block.type === "paragraph" && (
+                <p className="text-zinc-700 dark:text-zinc-300">{block.content}</p>
+              )}
               {block.type === "bulleted_list_item" && (
                 <li className="ml-4 list-disc text-zinc-700 dark:text-zinc-300">{block.content}</li>
               )}
               {block.type === "numbered_list_item" && (
-                <li className="ml-4 list-decimal text-zinc-700 dark:text-zinc-300">{block.content}</li>
+                <li className="ml-4 list-decimal text-zinc-700 dark:text-zinc-300">
+                  {block.content}
+                </li>
               )}
-              {block.type === "divider" && <hr className="border-zinc-200 dark:border-zinc-800 my-3" />}
+              {block.type === "divider" && (
+                <hr className="border-zinc-200 dark:border-zinc-800 my-3" />
+              )}
               {block.type === "embed" && (
                 <div className="rounded border border-zinc-200 dark:border-zinc-800 bg-zinc-100 dark:bg-zinc-800 p-2 text-xs truncate font-mono text-zinc-600 dark:text-zinc-400">
                   Embed: {block.content}
