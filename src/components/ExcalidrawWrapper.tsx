@@ -1,8 +1,8 @@
 "use client";
 
 import "@/lib/react-compat";
-import type { ExcalidrawElement } from "@excalidraw/excalidraw/types/element/types";
-import type { AppState, BinaryFiles } from "@excalidraw/excalidraw/types/types";
+import type { ExcalidrawElement } from "@excalidraw/excalidraw/element/types";
+import type { AppState, BinaryFiles } from "@excalidraw/excalidraw/types";
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ensureReact19Compat } from "@/lib/react-compat";
@@ -58,7 +58,9 @@ export function ExcalidrawWrapper({
     appState: Partial<AppState>;
   }>({
     elements: initialElements,
-    appState: initialAppState || {},
+    appState: (initialAppState
+      ? { ...initialAppState, gridSize: initialAppState.gridSize ?? undefined }
+      : {}) as Partial<AppState>,
   });
   const hasPendingChangesRef = useRef<boolean>(false);
 
@@ -185,7 +187,10 @@ export function ExcalidrawWrapper({
       <Excalidraw
         initialData={{
           elements: initialElements,
-          appState: initialSanitizedState,
+          appState: {
+            ...initialSanitizedState,
+            gridSize: initialSanitizedState.gridSize ?? undefined,
+          },
         }}
         onChange={handleChange}
         viewModeEnabled={isReadOnly}

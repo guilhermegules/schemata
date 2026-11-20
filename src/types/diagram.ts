@@ -1,4 +1,4 @@
-import type { ExcalidrawElement } from "@excalidraw/excalidraw/types/element/types";
+import type { ExcalidrawElement } from "@excalidraw/excalidraw/element/types";
 
 export type NormalizedZoomValue = number & { readonly _brand: "normalizedZoom" };
 
