@@ -153,4 +153,54 @@ describe("React 19 Compatibility Shim", () => {
     // Assert: In React 19, coerceRef reads element.props.ref
     expect(element.props.ref).toBe(mockRef);
   });
+
+  it("test_should_not_attach_ref_to_fragment_props_during_element_construction", () => {
+    // Arrange
+    const fragmentProps: Record<string, unknown> = { children: ["item-1", "item-2"] };
+    const fragmentElement = {
+      $$typeof: Symbol.for("react.element"),
+      type: Symbol.for("react.fragment"),
+      key: null,
+      ref: null,
+      props: fragmentProps,
+      _owner: null,
+    };
+
+    // Act
+    Object.defineProperty(fragmentElement, "_self", {
+      configurable: false,
+      enumerable: false,
+      writable: false,
+      value: null,
+    });
+
+    // Assert: Fragments must only contain allowed props (children, key)
+    expect(Object.keys(fragmentProps)).toEqual(["children"]);
+    expect("ref" in fragmentProps).toBe(false);
+  });
+
+  it("test_should_not_attach_ref_to_props_when_element_ref_is_null", () => {
+    // Arrange
+    const props: Record<string, unknown> = { id: "div-without-ref" };
+    const element = {
+      $$typeof: Symbol.for("react.element"),
+      type: "div",
+      key: null,
+      ref: null,
+      props,
+      _owner: null,
+    };
+
+    // Act
+    Object.defineProperty(element, "_self", {
+      configurable: false,
+      enumerable: false,
+      writable: false,
+      value: null,
+    });
+
+    // Assert: Props must remain unpolluted when ref is null
+    expect(Object.keys(props)).toEqual(["id"]);
+    expect("ref" in props).toBe(false);
+  });
 });

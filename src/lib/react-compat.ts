@@ -145,7 +145,15 @@ export function ensureReact19Compat(): void {
 
       if (prop === "_self" && obj && (obj as Record<string, unknown>).props) {
         const elem = obj as Record<string, unknown>;
-        if (elem.ref !== undefined) {
+        const isFragment =
+          elem.type === origSymbolFor("react.fragment") ||
+          elem.type === (React as unknown as { Fragment?: unknown }).Fragment;
+
+        if (isFragment) {
+          if ("ref" in (elem.props as Record<string, unknown>)) {
+            delete (elem.props as Record<string, unknown>).ref;
+          }
+        } else if (elem.ref != null) {
           try {
             origDefineProperty.call(Object, elem.props, "ref", {
               value: elem.ref,
