@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { getNotionPageDetail } from "@/lib/notion";
 import { diagramService } from "@/lib/diagram_service";
+import { getNotionPageDetail } from "@/lib/notion";
 
 export async function GET(_req: Request, { params }: { params: Promise<{ pageId: string }> }) {
   const { pageId } = await params;

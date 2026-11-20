@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
-import { diagramService } from "@/lib/diagram_service";
 import { ExcalidrawWrapper } from "@/components/ExcalidrawWrapper";
+import { diagramService } from "@/lib/diagram_service";
 
 export default async function EmbedPage({ params }: { params: Promise<{ diagramId: string }> }) {
   const { diagramId } = await params;

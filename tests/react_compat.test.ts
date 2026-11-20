@@ -1,6 +1,6 @@
-import { describe, it, expect, beforeEach } from "vitest";
 import React from "react";
 import ReactDOMServer from "react-dom/server";
+import { beforeEach, describe, expect, it } from "vitest";
 import { ensureReact19Compat } from "@/lib/react-compat";
 
 describe("React 19 Compatibility Shim", () => {
@@ -37,7 +37,9 @@ describe("React 19 Compatibility Shim", () => {
 
     // Act
     const owner = sharedInternals.ReactCurrentOwner as { current: unknown } | undefined;
-    const debugFrame = sharedInternals.ReactDebugCurrentFrame as { getStackAddendum?: () => string } | undefined;
+    const debugFrame = sharedInternals.ReactDebugCurrentFrame as
+      | { getStackAddendum?: () => string }
+      | undefined;
 
     // Assert
     expect(owner).toBeDefined();
@@ -98,7 +100,7 @@ describe("React 19 Compatibility Shim", () => {
 
     // Act: Simulate React 18 JSX runtime property filtering
     for (const prop in config) {
-      if (Object.prototype.hasOwnProperty.call(config, prop) && !reservedProps.hasOwnProperty(prop)) {
+      if (Object.hasOwn(config, prop) && !Object.hasOwn(reservedProps, prop)) {
         props[prop] = (config as Record<string, unknown>)[prop];
       }
     }

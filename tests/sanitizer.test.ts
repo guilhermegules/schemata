@@ -1,5 +1,5 @@
-import { describe, it, expect } from "vitest";
-import { sanitizeAppState, DEFAULT_APP_STATE } from "@/lib/sanitizer";
+import { describe, expect, it } from "vitest";
+import { DEFAULT_APP_STATE, sanitizeAppState } from "@/lib/sanitizer";
 
 describe("sanitizeAppState", () => {
   it("should return default app state when input is null or undefined", () => {

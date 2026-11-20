@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { diagramService } from "@/lib/diagram_service";
 import { auth, isAdminUser } from "@/lib/auth";
+import { diagramService } from "@/lib/diagram_service";
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;

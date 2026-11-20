@@ -1,10 +1,10 @@
 import { Client } from "@notionhq/client";
 import type {
-  PageObjectResponse,
   BlockObjectResponse,
+  PageObjectResponse,
   RichTextItemResponse,
 } from "@notionhq/client/build/src/api-endpoints";
-import { NotionPageSummary, NotionBlockItem, NotionPageDetail } from "@/types/notion";
+import type { NotionBlockItem, NotionPageDetail, NotionPageSummary } from "@/types/notion";
 
 function getNotionClient(): Client | null {
   const token = process.env.NOTION_TOKEN;
@@ -59,9 +59,7 @@ export interface EmbedBlock {
 }
 export interface ImageBlock {
   type: "image";
-  image:
-    | { type: "file"; file: { url: string } }
-    | { type: "external"; external: { url: string } };
+  image: { type: "file"; file: { url: string } } | { type: "external"; external: { url: string } };
 }
 export interface FallbackBlock {
   type: string;
@@ -87,17 +85,37 @@ export function formatRichText(richTextArray?: readonly MinimalRichTextItem[]): 
 export function parseBlockContent(block: MinimalBlock): { type: string; content: string } {
   switch (block.type) {
     case "paragraph":
-      return { type: block.type, content: "paragraph" in block ? formatRichText(block.paragraph.rich_text) : "" };
+      return {
+        type: block.type,
+        content: "paragraph" in block ? formatRichText(block.paragraph.rich_text) : "",
+      };
     case "heading_1":
-      return { type: block.type, content: "heading_1" in block ? formatRichText(block.heading_1.rich_text) : "" };
+      return {
+        type: block.type,
+        content: "heading_1" in block ? formatRichText(block.heading_1.rich_text) : "",
+      };
     case "heading_2":
-      return { type: block.type, content: "heading_2" in block ? formatRichText(block.heading_2.rich_text) : "" };
+      return {
+        type: block.type,
+        content: "heading_2" in block ? formatRichText(block.heading_2.rich_text) : "",
+      };
     case "heading_3":
-      return { type: block.type, content: "heading_3" in block ? formatRichText(block.heading_3.rich_text) : "" };
+      return {
+        type: block.type,
+        content: "heading_3" in block ? formatRichText(block.heading_3.rich_text) : "",
+      };
     case "bulleted_list_item":
-      return { type: block.type, content: "bulleted_list_item" in block ? formatRichText(block.bulleted_list_item.rich_text) : "" };
+      return {
+        type: block.type,
+        content:
+          "bulleted_list_item" in block ? formatRichText(block.bulleted_list_item.rich_text) : "",
+      };
     case "numbered_list_item":
-      return { type: block.type, content: "numbered_list_item" in block ? formatRichText(block.numbered_list_item.rich_text) : "" };
+      return {
+        type: block.type,
+        content:
+          "numbered_list_item" in block ? formatRichText(block.numbered_list_item.rich_text) : "",
+      };
     case "divider":
       return { type: block.type, content: "---" };
     case "embed":
@@ -193,12 +211,23 @@ export async function getNotionPageDetail(pageId: string): Promise<NotionPageDet
         {
           id: "b2",
           type: "paragraph",
-          content: "This document describes the high-level service interaction and component boundary contracts.",
+          content:
+            "This document describes the high-level service interaction and component boundary contracts.",
           hasChildren: false,
         },
         { id: "b3", type: "heading_2", content: "Component Boundaries", hasChildren: false },
-        { id: "b4", type: "bulleted_list_item", content: "Edge Gateway Router", hasChildren: false },
-        { id: "b5", type: "bulleted_list_item", content: "Async Worker Ingestion Pool", hasChildren: false },
+        {
+          id: "b4",
+          type: "bulleted_list_item",
+          content: "Edge Gateway Router",
+          hasChildren: false,
+        },
+        {
+          id: "b5",
+          type: "bulleted_list_item",
+          content: "Async Worker Ingestion Pool",
+          hasChildren: false,
+        },
       ],
     };
   }
@@ -264,7 +293,11 @@ export async function upsertNotionEmbedBlock(
 
   const children = await client.blocks.children.list({ block_id: pageId, page_size: 100 });
   const existingEmbed = children.results.find((b) => {
-    return isFullBlock(b) && b.type === "embed" && (b.embed.url.includes("/embed/") || b.embed.url === embedUrl);
+    return (
+      isFullBlock(b) &&
+      b.type === "embed" &&
+      (b.embed.url.includes("/embed/") || b.embed.url === embedUrl)
+    );
   });
 
   if (existingEmbed && isFullBlock(existingEmbed)) {

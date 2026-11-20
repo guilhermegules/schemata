@@ -1,6 +1,11 @@
-import { describe, it, expect } from "vitest";
-import { createDiagram, getDiagramById, getDiagramByNotionPageId, updateDiagram } from "@/lib/firestore";
 import type { ExcalidrawElement } from "@excalidraw/excalidraw/types/element/types";
+import { describe, expect, it } from "vitest";
+import {
+  createDiagram,
+  getDiagramById,
+  getDiagramByNotionPageId,
+  updateDiagram,
+} from "@/lib/firestore";
 
 describe("Firestore Data Access Layer (with memory mock)", () => {
   it("should create and retrieve a diagram document", async () => {

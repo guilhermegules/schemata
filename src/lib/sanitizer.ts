@@ -1,4 +1,4 @@
-import { AppStatePersisted, toNormalizedZoom } from "@/types/diagram";
+import { type AppStatePersisted, toNormalizedZoom } from "@/types/diagram";
 
 export const DEFAULT_APP_STATE: AppStatePersisted = {
   viewBackgroundColor: "#ffffff",
@@ -27,10 +27,20 @@ export function sanitizeAppState(rawState?: Record<string, unknown> | null): App
   }
 
   const zoomNumber = extractZoomValue(rawState.zoom);
-  const bgColor = typeof rawState.viewBackgroundColor === "string" ? rawState.viewBackgroundColor : "#ffffff";
-  const gridSize = typeof rawState.gridSize === "number" && Number.isFinite(rawState.gridSize) ? rawState.gridSize : null;
-  const scrollX = typeof rawState.scrollX === "number" && Number.isFinite(rawState.scrollX) ? rawState.scrollX : 0;
-  const scrollY = typeof rawState.scrollY === "number" && Number.isFinite(rawState.scrollY) ? rawState.scrollY : 0;
+  const bgColor =
+    typeof rawState.viewBackgroundColor === "string" ? rawState.viewBackgroundColor : "#ffffff";
+  const gridSize =
+    typeof rawState.gridSize === "number" && Number.isFinite(rawState.gridSize)
+      ? rawState.gridSize
+      : null;
+  const scrollX =
+    typeof rawState.scrollX === "number" && Number.isFinite(rawState.scrollX)
+      ? rawState.scrollX
+      : 0;
+  const scrollY =
+    typeof rawState.scrollY === "number" && Number.isFinite(rawState.scrollY)
+      ? rawState.scrollY
+      : 0;
 
   return {
     viewBackgroundColor: bgColor,

@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { listNotionDatabasePages } from "@/lib/notion";
 import { diagramService } from "@/lib/diagram_service";
+import { listNotionDatabasePages } from "@/lib/notion";
 
 export default async function DashboardPage() {
   const pages = await listNotionDatabasePages();
@@ -21,7 +21,9 @@ export default async function DashboardPage() {
         <header className="mb-8 border-b border-zinc-200 dark:border-zinc-800 pb-4">
           <div>
             <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">Schemata</h1>
-            <p className="text-sm text-zinc-500">Personal Architecture Documentation & Diagram Studio</p>
+            <p className="text-sm text-zinc-500">
+              Personal Architecture Documentation & Diagram Studio
+            </p>
           </div>
         </header>
 
@@ -38,7 +40,9 @@ export default async function DashboardPage() {
                 <div>
                   <div className="flex items-center gap-2 mb-2">
                     <span className="text-xl">{page.icon}</span>
-                    <h3 className="font-semibold text-zinc-900 dark:text-zinc-100 truncate">{page.title}</h3>
+                    <h3 className="font-semibold text-zinc-900 dark:text-zinc-100 truncate">
+                      {page.title}
+                    </h3>
                   </div>
                   <p className="text-xs text-zinc-400">
                     {page.diagramId ? "Linked Excalidraw Diagram active" : "No diagram created yet"}

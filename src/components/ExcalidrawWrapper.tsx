@@ -1,13 +1,13 @@
 "use client";
 
 import "@/lib/react-compat";
-import React, { useEffect, useRef, useState, useCallback } from "react";
-import dynamic from "next/dynamic";
 import type { ExcalidrawElement } from "@excalidraw/excalidraw/types/element/types";
 import type { AppState, BinaryFiles } from "@excalidraw/excalidraw/types/types";
-import { AppStatePersisted } from "@/types/diagram";
-import { sanitizeAppState } from "@/lib/sanitizer";
+import dynamic from "next/dynamic";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ensureReact19Compat } from "@/lib/react-compat";
+import { sanitizeAppState } from "@/lib/sanitizer";
+import type { AppStatePersisted } from "@/types/diagram";
 
 const Excalidraw = dynamic(
   async () => {
@@ -21,7 +21,14 @@ const Excalidraw = dynamic(
       <div className="flex h-full w-full items-center justify-center bg-zinc-50 dark:bg-zinc-900 text-zinc-500 text-sm">
         <div className="flex items-center gap-2">
           <svg className="animate-spin h-5 w-5 text-zinc-500" viewBox="0 0 24 24" fill="none">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+            <circle
+              className="opacity-25"
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              strokeWidth="4"
+            />
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
           </svg>
           Loading Canvas...
@@ -143,7 +150,9 @@ export function ExcalidrawWrapper({
     }, 2000);
   };
 
-  const initialSanitizedState = sanitizeAppState(initialAppState as Record<string, unknown> | undefined);
+  const initialSanitizedState = sanitizeAppState(
+    initialAppState as Record<string, unknown> | undefined
+  );
 
   return (
     <div className="relative h-full w-full">

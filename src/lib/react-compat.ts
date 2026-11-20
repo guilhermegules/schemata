@@ -2,10 +2,11 @@ import React from "react";
 
 export function ensureReact19Compat(): void {
   const reactAny = React as unknown as Record<string, unknown>;
-  const clientInternals = (reactAny.__CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE ||
-    reactAny.__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED) as
-    | Record<string, unknown>
-    | undefined;
+  const clientInternals =
+    (reactAny.__CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE ||
+      reactAny.__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED) as
+      | Record<string, unknown>
+      | undefined;
 
   if (clientInternals) {
     if (!reactAny.__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED) {
@@ -78,7 +79,7 @@ export function ensureReact19Compat(): void {
 
   if (!symbolAny.__react19ElementBridged) {
     symbolAny.__react19ElementBridged = true;
-    Symbol.for = function (key: string): symbol {
+    Symbol.for = (key: string): symbol => {
       if (key === "react.element") {
         return transitionalSymbol;
       }
@@ -104,12 +105,28 @@ export function ensureReact19Compat(): void {
       return origHasOwnProperty.call(this, prop);
     };
 
+    if (Object.hasOwn) {
+      const origHasOwn = Object.hasOwn;
+      Object.hasOwn = (obj: object, prop: PropertyKey): boolean => {
+        if (
+          prop === "ref" &&
+          obj &&
+          (obj as Record<string, unknown>).key === true &&
+          (obj as Record<string, unknown>).ref === true &&
+          (obj as Record<string, unknown>).__self === true
+        ) {
+          return false;
+        }
+        return origHasOwn.call(Object, obj, prop);
+      };
+    }
+
     const origDefineProperty = Object.defineProperty;
-    Object.defineProperty = function <T>(
+    Object.defineProperty = <T>(
       obj: T,
       prop: PropertyKey,
       descriptor: PropertyDescriptor & ThisType<unknown>
-    ): T {
+    ): T => {
       if (
         prop === "ref" &&
         descriptor &&

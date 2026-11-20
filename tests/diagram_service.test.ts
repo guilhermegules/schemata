@@ -1,6 +1,6 @@
-import { describe, it, expect } from "vitest";
-import { diagramService } from "@/lib/diagram_service";
 import type { ExcalidrawElement } from "@excalidraw/excalidraw/types/element/types";
+import { describe, expect, it } from "vitest";
+import { diagramService } from "@/lib/diagram_service";
 import { toNormalizedZoom } from "@/types/diagram";
 
 describe("DiagramService", () => {

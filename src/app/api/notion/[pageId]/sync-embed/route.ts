@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { upsertNotionEmbedBlock } from "@/lib/notion";
 import { auth, isAdminUser } from "@/lib/auth";
+import { upsertNotionEmbedBlock } from "@/lib/notion";
 
 export async function POST(req: Request, { params }: { params: Promise<{ pageId: string }> }) {
   const session = await auth();

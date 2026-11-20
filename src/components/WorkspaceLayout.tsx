@@ -1,10 +1,10 @@
 "use client";
 
-import React, { useState } from "react";
-import { NotionReader } from "@/components/NotionReader";
+import { useState } from "react";
 import { ExcalidrawWrapper } from "@/components/ExcalidrawWrapper";
-import { NotionPageDetail } from "@/types/notion";
-import { DiagramDocument } from "@/types/diagram";
+import { NotionReader } from "@/components/NotionReader";
+import type { DiagramDocument } from "@/types/diagram";
+import type { NotionPageDetail } from "@/types/notion";
 
 interface WorkspaceLayoutProps {
   pageDetail: NotionPageDetail;
@@ -22,7 +22,7 @@ export function WorkspaceLayout({ pageDetail, diagram }: WorkspaceLayoutProps) {
 
       <div
         className="w-1.5 cursor-col-resize bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-400 dark:hover:bg-zinc-600 transition flex-shrink-0"
-        onMouseDown={(e) => {
+        onMouseDown={(_e) => {
           const handleMouseMove = (moveEvent: MouseEvent) => {
             const newRatio = (moveEvent.clientX / window.innerWidth) * 100;
             if (newRatio >= 20 && newRatio <= 70) {
