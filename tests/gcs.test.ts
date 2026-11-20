@@ -3,7 +3,7 @@ import { uploadBinaryAsset, getBinaryAsset } from "@/lib/gcs";
 
 describe("Google Cloud Storage Client (with local memory fallback)", () => {
   beforeEach(() => {
-    delete process.env.NODE_ENV;
+    (process.env as any).NODE_ENV = "test";
   });
 
   it("should upload binary asset buffer and return valid metadata", async () => {

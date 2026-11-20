@@ -3,7 +3,7 @@ import { createDiagram, getDiagramById, getDiagramByNotionPageId, updateDiagram 
 
 describe("Firestore Data Access Layer (with memory mock)", () => {
   beforeEach(() => {
-    delete process.env.NODE_ENV;
+    (process.env as any).NODE_ENV = "test";
   });
 
   it("should create and retrieve a diagram document", async () => {
