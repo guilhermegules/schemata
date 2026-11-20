@@ -7,7 +7,7 @@ import type {
 } from "@/types/notion";
 
 const NOTION_API_BASE = "https://api.notion.com/v1";
-const NOTION_API_VERSION = "2022-06-28";
+const NOTION_API_VERSION = "2026-03-11";
 
 interface MinimalRichTextItem {
   plain_text?: string;
@@ -60,7 +60,7 @@ interface RawNotionBlock {
 }
 
 function getNotionHeaders(): Record<string, string> | null {
-  const token = process.env.NOTION_TOKEN;
+  const token = process.env.NOTION_API_KEY || process.env.NOTION_TOKEN;
   if (!token) {
     return null;
   }
