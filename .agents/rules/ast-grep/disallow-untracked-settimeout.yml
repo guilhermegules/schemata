@@ -1,0 +1,11 @@
+id: disallow-untracked-settimeout
+message: "Do not invoke setTimeout in UI components without storing the timer handle in a ref and cleaning it up on unmount."
+severity: warning
+language: typescript
+rule:
+  pattern: |
+    setTimeout($$$CALLBACK, $$$DELAY)
+  not:
+    inside:
+      pattern: |
+        $REF.current = setTimeout($$$CALLBACK, $$$DELAY)
