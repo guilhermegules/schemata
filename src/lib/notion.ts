@@ -1,3 +1,4 @@
+import { Client } from "@notionhq/client";
 import type {
   NotionBlockItem,
   NotionPageDetail,
@@ -5,9 +6,6 @@ import type {
   NotionUpdatePagePayload,
   NotionUpdatePageResult,
 } from "@/types/notion";
-
-const NOTION_API_BASE = "https://api.notion.com/v1";
-const NOTION_API_VERSION = "2026-03-11";
 
 interface MinimalRichTextItem {
   plain_text?: string;
@@ -59,16 +57,15 @@ interface RawNotionBlock {
   };
 }
 
-function getNotionHeaders(): Record<string, string> | null {
+function getNotionClient(): Client | null {
   const token = process.env.NOTION_API_KEY || process.env.NOTION_TOKEN;
   if (!token) {
     return null;
   }
-  return {
-    Authorization: `Bearer ${token}`,
-    "Notion-Version": NOTION_API_VERSION,
-    "Content-Type": "application/json",
-  };
+  return new Client({
+    auth: token,
+    notionVersion: "2026-03-11",
+  });
 }
 
 function normalizeNotionId(id: string): string {
@@ -178,10 +175,10 @@ function findTitlePropertyName(properties?: RawNotionPage["properties"]): string
 }
 
 export async function listNotionDatabasePages(): Promise<NotionPageSummary[]> {
-  const headers = getNotionHeaders();
+  const client = getNotionClient();
   const databaseId = process.env.NOTION_DATABASE_ID;
 
-  if (!headers || !databaseId) {
+  if (!client || !databaseId) {
     return [
       {
         id: "mock-page-1",
@@ -201,21 +198,15 @@ export async function listNotionDatabasePages(): Promise<NotionPageSummary[]> {
   }
 
   const cleanDbId = normalizeNotionId(databaseId);
-  const response = await fetch(`${NOTION_API_BASE}/databases/${cleanDbId}/query`, {
-    method: "POST",
-    headers,
-    body: JSON.stringify({ page_size: 50 }),
+  const response = await client.request<{ results?: RawNotionPage[] }>({
+    path: `databases/${cleanDbId}/query`,
+    method: "post",
+    body: { page_size: 50 },
   });
 
-  if (!response.ok) {
-    const errorBody = await response.text();
-    throw new Error(`Failed to query Notion database: HTTP ${response.status} - ${errorBody}`);
-  }
-
-  const data = (await response.json()) as { results?: RawNotionPage[] };
   const pages: NotionPageSummary[] = [];
 
-  for (const item of data.results || []) {
+  for (const item of response.results || []) {
     const title = extractPageTitle(item.properties);
     const iconEmoji = item.icon?.type === "emoji" ? item.icon.emoji : "📄";
 
@@ -232,9 +223,9 @@ export async function listNotionDatabasePages(): Promise<NotionPageSummary[]> {
 }
 
 export async function getNotionPageDetail(pageId: string): Promise<NotionPageDetail> {
-  const headers = getNotionHeaders();
+  const client = getNotionClient();
 
-  if (!headers) {
+  if (!client) {
     return {
       page: {
         id: pageId,
@@ -271,31 +262,13 @@ export async function getNotionPageDetail(pageId: string): Promise<NotionPageDet
 
   const cleanPageId = normalizeNotionId(pageId);
 
-  const [pageRes, blocksRes] = await Promise.all([
-    fetch(`${NOTION_API_BASE}/pages/${cleanPageId}`, {
-      method: "GET",
-      headers,
-    }),
-    fetch(`${NOTION_API_BASE}/blocks/${cleanPageId}/children?page_size=100`, {
-      method: "GET",
-      headers,
-    }),
+  const [rawPage, blocksResponse] = await Promise.all([
+    client.pages.retrieve({ page_id: cleanPageId }) as Promise<RawNotionPage>,
+    client.blocks.children.list({
+      block_id: cleanPageId,
+      page_size: 100,
+    }) as Promise<{ results?: RawNotionBlock[] }>,
   ]);
-
-  if (!pageRes.ok) {
-    const errorText = await pageRes.text();
-    throw new Error(`Failed to retrieve Notion page: HTTP ${pageRes.status} - ${errorText}`);
-  }
-
-  if (!blocksRes.ok) {
-    const errorText = await blocksRes.text();
-    throw new Error(
-      `Failed to retrieve Notion block children: HTTP ${blocksRes.status} - ${errorText}`
-    );
-  }
-
-  const rawPage = (await pageRes.json()) as RawNotionPage;
-  const blocksData = (await blocksRes.json()) as { results?: RawNotionBlock[] };
 
   const title = extractPageTitle(rawPage.properties);
   const iconEmoji = rawPage.icon?.type === "emoji" ? rawPage.icon.emoji : "📄";
@@ -303,7 +276,7 @@ export async function getNotionPageDetail(pageId: string): Promise<NotionPageDet
   const lastEditedTime = rawPage.last_edited_time || new Date().toISOString();
 
   const blocks: NotionBlockItem[] = [];
-  for (const b of blocksData.results || []) {
+  for (const b of blocksResponse.results || []) {
     const { type, content } = parseBlockContent(b);
     blocks.push({
       id: b.id,
@@ -329,25 +302,17 @@ export async function upsertNotionEmbedBlock(
   pageId: string,
   embedUrl: string
 ): Promise<{ action: "updated" | "appended"; blockId: string }> {
-  const headers = getNotionHeaders();
-  if (!headers) {
+  const client = getNotionClient();
+  if (!client) {
     return { action: "appended", blockId: "mock-embed-block-id" };
   }
 
   const cleanPageId = normalizeNotionId(pageId);
-  const listRes = await fetch(`${NOTION_API_BASE}/blocks/${cleanPageId}/children?page_size=100`, {
-    method: "GET",
-    headers,
-  });
+  const listData = (await client.blocks.children.list({
+    block_id: cleanPageId,
+    page_size: 100,
+  })) as { results?: RawNotionBlock[] };
 
-  if (!listRes.ok) {
-    const errText = await listRes.text();
-    throw new Error(
-      `Failed to list block children for embed upsert: HTTP ${listRes.status} - ${errText}`
-    );
-  }
-
-  const listData = (await listRes.json()) as { results?: RawNotionBlock[] };
   const existingEmbed = (listData.results || []).find((b) => {
     return (
       b.type === "embed" &&
@@ -356,46 +321,27 @@ export async function upsertNotionEmbedBlock(
   });
 
   if (existingEmbed) {
-    const updateRes = await fetch(`${NOTION_API_BASE}/blocks/${existingEmbed.id}`, {
-      method: "PATCH",
-      headers,
-      body: JSON.stringify({
-        embed: { url: embedUrl },
-      }),
+    await client.blocks.update({
+      block_id: existingEmbed.id,
+      embed: { url: embedUrl } as unknown as never,
     });
-
-    if (!updateRes.ok) {
-      const errText = await updateRes.text();
-      throw new Error(`Failed to update Notion embed block: HTTP ${updateRes.status} - ${errText}`);
-    }
-
     return { action: "updated", blockId: existingEmbed.id };
   }
 
-  const appendRes = await fetch(`${NOTION_API_BASE}/blocks/${cleanPageId}/children`, {
-    method: "PATCH",
-    headers,
-    body: JSON.stringify({
-      children: [
-        {
-          object: "block",
-          type: "embed",
-          embed: {
-            url: embedUrl,
-          },
+  const appendResponse = (await client.blocks.children.append({
+    block_id: cleanPageId,
+    children: [
+      {
+        object: "block",
+        type: "embed",
+        embed: {
+          url: embedUrl,
         },
-      ],
-    }),
-  });
+      } as unknown as never,
+    ],
+  })) as { results?: Array<{ id: string }> };
 
-  if (!appendRes.ok) {
-    const errText = await appendRes.text();
-    throw new Error(`Failed to append Notion embed block: HTTP ${appendRes.status} - ${errText}`);
-  }
-
-  const appendData = (await appendRes.json()) as { results?: Array<{ id: string }> };
-  const createdBlock = appendData.results?.[0];
-
+  const createdBlock = appendResponse.results?.[0];
   return { action: "appended", blockId: createdBlock?.id || "appended-block-id" };
 }
 
@@ -403,8 +349,8 @@ export async function updateNotionPageContent(
   pageId: string,
   updates: NotionUpdatePagePayload
 ): Promise<NotionUpdatePageResult> {
-  const headers = getNotionHeaders();
-  if (!headers) {
+  const client = getNotionClient();
+  if (!client) {
     return {
       updatedTitle: updates.title,
       updatedBlockCount: updates.blocks?.length || 0,
@@ -415,35 +361,20 @@ export async function updateNotionPageContent(
   let updatedTitle: string | undefined;
 
   if (updates.title !== undefined) {
-    const pageRes = await fetch(`${NOTION_API_BASE}/pages/${cleanPageId}`, {
-      method: "GET",
-      headers,
-    });
+    const rawPage = (await client.pages.retrieve({
+      page_id: cleanPageId,
+    })) as RawNotionPage;
 
-    let titlePropName = "title";
-    if (pageRes.ok) {
-      const pageData = (await pageRes.json()) as RawNotionPage;
-      titlePropName = findTitlePropertyName(pageData.properties);
-    }
+    const titlePropName = findTitlePropertyName(rawPage.properties);
 
-    const patchPageRes = await fetch(`${NOTION_API_BASE}/pages/${cleanPageId}`, {
-      method: "PATCH",
-      headers,
-      body: JSON.stringify({
-        properties: {
-          [titlePropName]: {
-            title: [{ type: "text", text: { content: updates.title } }],
-          },
+    await client.pages.update({
+      page_id: cleanPageId,
+      properties: {
+        [titlePropName]: {
+          title: [{ type: "text", text: { content: updates.title } }],
         },
-      }),
+      } as unknown as never,
     });
-
-    if (!patchPageRes.ok) {
-      const errText = await patchPageRes.text();
-      throw new Error(
-        `Failed to update Notion page title: HTTP ${patchPageRes.status} - ${errText}`
-      );
-    }
 
     updatedTitle = updates.title;
   }
@@ -470,16 +401,14 @@ export async function updateNotionPageContent(
         continue;
       }
 
-      const updateBlockRes = await fetch(`${NOTION_API_BASE}/blocks/${b.id}`, {
-        method: "PATCH",
-        headers,
-        body: JSON.stringify({
+      try {
+        await client.blocks.update({
+          block_id: b.id,
           [b.type]: { rich_text: richText },
-        }),
-      });
-
-      if (updateBlockRes.ok) {
+        } as unknown as never);
         updatedBlockCount++;
+      } catch (err) {
+        console.warn(`Failed to update block ${b.id}:`, err);
       }
     }
   }
