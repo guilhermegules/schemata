@@ -4,7 +4,13 @@ import type {
   PageObjectResponse,
   RichTextItemResponse,
 } from "@notionhq/client/build/src/api-endpoints";
-import type { NotionBlockItem, NotionPageDetail, NotionPageSummary } from "@/types/notion";
+import type {
+  NotionBlockItem,
+  NotionPageDetail,
+  NotionPageSummary,
+  NotionUpdatePagePayload,
+  NotionUpdatePageResult,
+} from "@/types/notion";
 
 function getNotionClient(): Client | null {
   const token = process.env.NOTION_TOKEN;
@@ -323,4 +329,81 @@ export async function upsertNotionEmbedBlock(
 
   const createdBlock = appendResponse.results[0];
   return { action: "appended", blockId: createdBlock.id };
+}
+
+export async function updateNotionPageContent(
+  pageId: string,
+  updates: NotionUpdatePagePayload
+): Promise<NotionUpdatePageResult> {
+  const client = getNotionClient();
+  if (!client) {
+    return {
+      updatedTitle: updates.title,
+      updatedBlockCount: updates.blocks?.length || 0,
+    };
+  }
+
+  let updatedTitle: string | undefined;
+
+  if (updates.title !== undefined) {
+    await client.pages.update({
+      page_id: pageId,
+      properties: {
+        title: {
+          title: [{ type: "text", text: { content: updates.title } }],
+        },
+      },
+    });
+    updatedTitle = updates.title;
+  }
+
+  let updatedBlockCount = 0;
+  if (Array.isArray(updates.blocks)) {
+    for (const b of updates.blocks) {
+      const richText = [{ type: "text" as const, text: { content: b.content } }];
+      try {
+        if (b.type === "paragraph") {
+          await client.blocks.update({
+            block_id: b.id,
+            paragraph: { rich_text: richText },
+          });
+          updatedBlockCount++;
+        } else if (b.type === "heading_1") {
+          await client.blocks.update({
+            block_id: b.id,
+            heading_1: { rich_text: richText },
+          });
+          updatedBlockCount++;
+        } else if (b.type === "heading_2") {
+          await client.blocks.update({
+            block_id: b.id,
+            heading_2: { rich_text: richText },
+          });
+          updatedBlockCount++;
+        } else if (b.type === "heading_3") {
+          await client.blocks.update({
+            block_id: b.id,
+            heading_3: { rich_text: richText },
+          });
+          updatedBlockCount++;
+        } else if (b.type === "bulleted_list_item") {
+          await client.blocks.update({
+            block_id: b.id,
+            bulleted_list_item: { rich_text: richText },
+          });
+          updatedBlockCount++;
+        } else if (b.type === "numbered_list_item") {
+          await client.blocks.update({
+            block_id: b.id,
+            numbered_list_item: { rich_text: richText },
+          });
+          updatedBlockCount++;
+        }
+      } catch (err) {
+        console.warn(`Failed to update block ${b.id}:`, err);
+      }
+    }
+  }
+
+  return { updatedTitle, updatedBlockCount };
 }
