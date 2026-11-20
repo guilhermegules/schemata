@@ -18,15 +18,10 @@ export default async function DashboardPage() {
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 p-8">
       <div className="mx-auto max-w-5xl">
-        <header className="mb-8 flex items-center justify-between border-b border-zinc-200 dark:border-zinc-800 pb-4">
+        <header className="mb-8 border-b border-zinc-200 dark:border-zinc-800 pb-4">
           <div>
             <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">Schemata</h1>
             <p className="text-sm text-zinc-500">Personal Architecture Documentation & Diagram Studio</p>
-          </div>
-          <div className="flex items-center gap-3">
-            <span className="inline-flex items-center rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-medium text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
-              GCP Always Free Ready
-            </span>
           </div>
         </header>
 
