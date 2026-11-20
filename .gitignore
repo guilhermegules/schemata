@@ -1,0 +1,9 @@
+node_modules/
+.next/
+dist/
+build/
+.worktrees/
+features/
+.env
+.env*.local
+*.log
