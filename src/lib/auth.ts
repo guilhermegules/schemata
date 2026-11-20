@@ -1,7 +1,7 @@
 import NextAuth from "next-auth";
 import GitHub from "next-auth/providers/github";
 
-export * from "./auth_guard";
+export * from "./auth-guard";
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   providers: [

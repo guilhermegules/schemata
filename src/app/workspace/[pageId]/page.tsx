@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { WorkspaceLayout } from "@/components/WorkspaceLayout";
-import { diagramService } from "@/lib/diagram_service";
+import { diagramService } from "@/lib/diagram-service";
 import { getNotionPageDetail } from "@/lib/notion";
 
 export default async function WorkspacePage({ params }: { params: Promise<{ pageId: string }> }) {

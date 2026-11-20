@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth, isAdminUser } from "@/lib/auth";
-import { diagramService } from "@/lib/diagram_service";
+import { diagramService } from "@/lib/diagram-service";
 
 export async function POST(req: Request) {
   const session = await auth();
