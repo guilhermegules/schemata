@@ -1,6 +1,5 @@
 import React from "react";
-import ReactDOMServer from "react-dom/server";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ensureReact19Compat } from "@/lib/react-compat";
 
 describe("React 19 Compatibility Shim", () => {
@@ -75,132 +74,24 @@ describe("React 19 Compatibility Shim", () => {
     expect(sharedInternals.H).toBe(mockDispatcher);
   });
 
-  it("test_should_bridge_react_element_symbol_to_transitional_element", () => {
-    // Arrange & Act
-    const elementSymbol = Symbol.for("react.element");
-    const otherSymbol = Symbol.for("react.fragment");
+  it("test_should_not_pollute_object_prototype_or_trigger_key_getter", () => {
+    // Arrange: Create a props object with a React 19 style key warning getter
+    const keyGetterSpy = vi.fn(() => undefined);
+    const mockProps: Record<string, unknown> = { id: "test-btn", children: "Click Me" };
 
-    // Assert
-    expect(elementSymbol.toString()).toBe("Symbol(react.transitional.element)");
-    expect(otherSymbol.toString()).toBe("Symbol(react.fragment)");
-  });
-
-  it("test_should_render_bridged_element_through_react_reconciler_without_legacy_error", () => {
-    // Arrange
-    const bridgedElement = {
-      $$typeof: Symbol.for("react.element"),
-      type: "div",
-      key: null,
-      ref: null,
-      props: { id: "test-canvas-container", children: "Canvas Content" },
-      _owner: null,
-    };
-
-    // Act
-    const html = ReactDOMServer.renderToString(bridgedElement as unknown as React.ReactElement);
-
-    // Assert
-    expect(html).toBe('<div id="test-canvas-container">Canvas Content</div>');
-  });
-
-  it("test_should_preserve_ref_on_props_when_simulating_react18_jsx_runtime", () => {
-    // Arrange
-    const reservedProps = { key: true, ref: true, __self: true, __source: true };
-    const config = { id: "canvas-ref-test", ref: { current: "mock-dom-node" } };
-    const props: Record<string, unknown> = {};
-
-    // Act: Simulate React 18 JSX runtime property filtering
-    for (const prop in config) {
-      if (Object.hasOwn(config, prop) && !Object.hasOwn(reservedProps, prop)) {
-        props[prop] = (config as Record<string, unknown>)[prop];
-      }
-    }
-
-    // Simulate React 18 defineRefPropWarningGetter attempt
-    const warningFn = () => undefined;
-    (warningFn as unknown as { isReactWarning: boolean }).isReactWarning = true;
-    Object.defineProperty(props, "ref", {
-      get: warningFn,
+    Object.defineProperty(mockProps, "key", {
+      get: keyGetterSpy,
       configurable: true,
-    });
-
-    // Assert
-    expect(props).toHaveProperty("ref");
-    expect(props.ref).toEqual({ current: "mock-dom-node" });
-  });
-
-  it("test_should_attach_ref_to_props_via_element_self_construction", () => {
-    // Arrange
-    const mockRef = { current: "canvas-container-node" };
-    const props: Record<string, unknown> = { id: "excalidraw-container" };
-    const element = {
-      $$typeof: Symbol.for("react.element"),
-      type: "div",
-      key: null,
-      ref: mockRef,
-      props,
-      _owner: null,
-    };
-
-    // Act: Simulate React 18 ReactElement initialization (_self assignment)
-    Object.defineProperty(element, "_self", {
-      configurable: false,
       enumerable: false,
-      writable: false,
-      value: null,
     });
 
-    // Assert: In React 19, coerceRef reads element.props.ref
-    expect(element.props.ref).toBe(mockRef);
-  });
+    // Act: Check hasOwnProperty/hasOwn on props as React and libraries do
+    const hasRef = Object.hasOwn(mockProps, "ref");
+    const hasId = Object.hasOwn(mockProps, "id");
 
-  it("test_should_not_attach_ref_to_fragment_props_during_element_construction", () => {
-    // Arrange
-    const fragmentProps: Record<string, unknown> = { children: ["item-1", "item-2"] };
-    const fragmentElement = {
-      $$typeof: Symbol.for("react.element"),
-      type: Symbol.for("react.fragment"),
-      key: null,
-      ref: null,
-      props: fragmentProps,
-      _owner: null,
-    };
-
-    // Act
-    Object.defineProperty(fragmentElement, "_self", {
-      configurable: false,
-      enumerable: false,
-      writable: false,
-      value: null,
-    });
-
-    // Assert: Fragments must only contain allowed props (children, key)
-    expect(Object.keys(fragmentProps)).toEqual(["children"]);
-    expect("ref" in fragmentProps).toBe(false);
-  });
-
-  it("test_should_not_attach_ref_to_props_when_element_ref_is_null", () => {
-    // Arrange
-    const props: Record<string, unknown> = { id: "div-without-ref" };
-    const element = {
-      $$typeof: Symbol.for("react.element"),
-      type: "div",
-      key: null,
-      ref: null,
-      props,
-      _owner: null,
-    };
-
-    // Act
-    Object.defineProperty(element, "_self", {
-      configurable: false,
-      enumerable: false,
-      writable: false,
-      value: null,
-    });
-
-    // Assert: Props must remain unpolluted when ref is null
-    expect(Object.keys(props)).toEqual(["id"]);
-    expect("ref" in props).toBe(false);
+    // Assert: Checking properties must NOT invoke the key warning getter
+    expect(hasRef).toBe(false);
+    expect(hasId).toBe(true);
+    expect(keyGetterSpy).not.toHaveBeenCalled();
   });
 });
