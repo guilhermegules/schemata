@@ -1,7 +1,15 @@
+import type { ExcalidrawElement } from "@excalidraw/excalidraw/element/types";
+
+export type NormalizedZoomValue = number & { readonly _brand: "normalizedZoom" };
+
+export function toNormalizedZoom(value: number): NormalizedZoomValue {
+  return value as NormalizedZoomValue;
+}
+
 export interface AppStatePersisted {
   viewBackgroundColor: string;
   gridSize: number | null;
-  zoom: { value: number };
+  zoom: { value: NormalizedZoomValue };
   scrollX: number;
   scrollY: number;
 }
@@ -18,7 +26,7 @@ export interface DiagramDocument {
   id: string;
   title: string;
   notionPageId: string;
-  elements: readonly any[];
+  elements: readonly ExcalidrawElement[];
   appState: AppStatePersisted;
   fileRefs: Record<string, FileReference>;
   createdAt: string;
@@ -28,13 +36,13 @@ export interface DiagramDocument {
 export interface DiagramCreateInput {
   title: string;
   notionPageId: string;
-  elements?: readonly any[];
+  elements?: readonly ExcalidrawElement[];
   appState?: Partial<AppStatePersisted>;
 }
 
 export interface DiagramUpdateInput {
   title?: string;
-  elements?: readonly any[];
+  elements?: readonly ExcalidrawElement[];
   appState?: Partial<AppStatePersisted>;
   fileRefs?: Record<string, FileReference>;
 }

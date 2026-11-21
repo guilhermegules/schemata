@@ -1,5 +1,5 @@
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { isAdminUser } from "@/lib/auth_guard";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { isAdminUser } from "@/lib/auth-guard";
 
 describe("Admin Whitelist Authorization Guard", () => {
   const originalAdmin = process.env.ADMIN_EMAIL;

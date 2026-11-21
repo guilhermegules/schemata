@@ -3,7 +3,8 @@ node_modules/
 dist/
 build/
 .worktrees/
-features/
+/features/
 .env
 .env*.local
 *.log
+*.tsbuildinfo

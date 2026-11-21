@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 import { upsertNotionEmbedBlock } from "@/lib/notion";
 
 describe("Notion Embed Synchronizer", () => {

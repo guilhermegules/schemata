@@ -68,7 +68,9 @@ export async function uploadBinaryAsset(params: UploadAssetParams): Promise<Uplo
   };
 }
 
-export async function getBinaryAsset(gcsPath: string): Promise<{ buffer: Buffer; mimeType: string } | null> {
+export async function getBinaryAsset(
+  gcsPath: string
+): Promise<{ buffer: Buffer; mimeType: string } | null> {
   const storage = getStorageClient();
   const bucketName = process.env.GCS_BUCKET_NAME || "schemata-assets";
 

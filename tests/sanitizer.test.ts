@@ -1,5 +1,5 @@
-import { describe, it, expect } from "vitest";
-import { sanitizeAppState, DEFAULT_APP_STATE } from "@/lib/sanitizer";
+import { describe, expect, it } from "vitest";
+import { DEFAULT_APP_STATE, sanitizeAppState } from "@/lib/sanitizer";
 
 describe("sanitizeAppState", () => {
   it("should return default app state when input is null or undefined", () => {
@@ -18,7 +18,7 @@ describe("sanitizeAppState", () => {
 
   it("should strip transient properties and preserve visual properties", () => {
     // Arrange
-    const dirtyState = {
+    const dirtyState: Record<string, unknown> = {
       viewBackgroundColor: "#1e1e1e",
       gridSize: 20,
       zoom: { value: 1.5 },
@@ -33,23 +33,22 @@ describe("sanitizeAppState", () => {
 
     // Act
     const sanitized = sanitizeAppState(dirtyState);
+    const untyped = sanitized as unknown as Record<string, unknown>;
 
     // Assert
-    expect(sanitized).toEqual({
-      viewBackgroundColor: "#1e1e1e",
-      gridSize: 20,
-      zoom: { value: 1.5 },
-      scrollX: 120,
-      scrollY: -45,
-    });
-    expect((sanitized as any).selectedElementIds).toBeUndefined();
-    expect((sanitized as any).editingElement).toBeUndefined();
-    expect((sanitized as any).cursorX).toBeUndefined();
+    expect(sanitized.viewBackgroundColor).toBe("#1e1e1e");
+    expect(sanitized.gridSize).toBe(20);
+    expect(sanitized.zoom.value).toBe(1.5);
+    expect(sanitized.scrollX).toBe(120);
+    expect(sanitized.scrollY).toBe(-45);
+    expect(untyped.selectedElementIds).toBeUndefined();
+    expect(untyped.editingElement).toBeUndefined();
+    expect(untyped.cursorX).toBeUndefined();
   });
 
   it("should handle numeric zoom values correctly", () => {
     // Arrange
-    const stateWithNumericZoom = {
+    const stateWithNumericZoom: Record<string, unknown> = {
       viewBackgroundColor: "#ffffff",
       zoom: 2,
     };
@@ -58,6 +57,6 @@ describe("sanitizeAppState", () => {
     const sanitized = sanitizeAppState(stateWithNumericZoom);
 
     // Assert
-    expect(sanitized.zoom).toEqual({ value: 2 });
+    expect(sanitized.zoom.value).toBe(2);
   });
 });

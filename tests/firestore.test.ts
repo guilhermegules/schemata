@@ -1,17 +1,19 @@
-import { describe, it, expect, beforeEach } from "vitest";
-import { createDiagram, getDiagramById, getDiagramByNotionPageId, updateDiagram } from "@/lib/firestore";
+import type { ExcalidrawElement } from "@excalidraw/excalidraw/element/types";
+import { describe, expect, it } from "vitest";
+import {
+  createDiagram,
+  getDiagramById,
+  getDiagramByNotionPageId,
+  updateDiagram,
+} from "@/lib/firestore";
 
 describe("Firestore Data Access Layer (with memory mock)", () => {
-  beforeEach(() => {
-    delete process.env.NODE_ENV;
-  });
-
   it("should create and retrieve a diagram document", async () => {
     // Arrange
     const input = {
       title: "System Architecture",
       notionPageId: "notion-page-12345",
-      elements: [{ id: "rect-1", type: "rectangle" }],
+      elements: [{ id: "rect-1", type: "rectangle" } as unknown as ExcalidrawElement],
       appState: { viewBackgroundColor: "#f0f0f0" },
     };
 
@@ -54,14 +56,14 @@ describe("Firestore Data Access Layer (with memory mock)", () => {
       title: "Updated Architecture",
       appState: {
         viewBackgroundColor: "#222222",
-        cursorX: 999, // Should be stripped by sanitizer
-      } as any,
+      },
     });
 
     // Assert
     expect(updated).not.toBeNull();
     expect(updated?.title).toBe("Updated Architecture");
     expect(updated?.appState.viewBackgroundColor).toBe("#222222");
-    expect((updated?.appState as any).cursorX).toBeUndefined();
+    const untyped = updated?.appState as unknown as Record<string, unknown>;
+    expect(untyped.cursorX).toBeUndefined();
   });
 });

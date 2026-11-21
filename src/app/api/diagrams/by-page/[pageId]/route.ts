@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { diagramService } from "@/lib/diagram_service";
+import { diagramService } from "@/lib/diagram-service";
 
 export async function GET(_req: Request, { params }: { params: Promise<{ pageId: string }> }) {
   const { pageId } = await params;
