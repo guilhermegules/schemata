@@ -1,136 +1,177 @@
 import { Client } from "@notionhq/client";
 import type {
-  BlockObjectResponse,
-  PageObjectResponse,
-  RichTextItemResponse,
-} from "@notionhq/client/build/src/api-endpoints";
-import type { NotionBlockItem, NotionPageDetail, NotionPageSummary } from "@/types/notion";
+  NotionBlockItem,
+  NotionPageDetail,
+  NotionPageSummary,
+  NotionUpdatePagePayload,
+  NotionUpdatePageResult,
+} from "@/types/notion";
+
+interface MinimalRichTextItem {
+  plain_text?: string;
+  type?: string;
+  text?: {
+    content?: string;
+  };
+}
+
+interface RawNotionPage {
+  id: string;
+  url?: string;
+  last_edited_time?: string;
+  icon?: {
+    type?: string;
+    emoji?: string;
+  };
+  properties?: Record<
+    string,
+    {
+      type?: string;
+      title?: MinimalRichTextItem[];
+      [key: string]: unknown;
+    }
+  >;
+}
+
+interface RawNotionBlock {
+  id: string;
+  type: string;
+  has_children?: boolean;
+  paragraph?: { rich_text?: MinimalRichTextItem[] };
+  heading_1?: { rich_text?: MinimalRichTextItem[] };
+  heading_2?: { rich_text?: MinimalRichTextItem[] };
+  heading_3?: { rich_text?: MinimalRichTextItem[] };
+  bulleted_list_item?: { rich_text?: MinimalRichTextItem[] };
+  numbered_list_item?: { rich_text?: MinimalRichTextItem[] };
+  to_do?: { rich_text?: MinimalRichTextItem[] };
+  toggle?: { rich_text?: MinimalRichTextItem[] };
+  quote?: { rich_text?: MinimalRichTextItem[] };
+  callout?: { rich_text?: MinimalRichTextItem[] };
+  code?: { rich_text?: MinimalRichTextItem[] };
+  divider?: Record<string, never>;
+  embed?: { url?: string };
+  image?: {
+    type?: "file" | "external";
+    file?: { url?: string };
+    external?: { url?: string };
+  };
+}
 
 function getNotionClient(): Client | null {
-  const token = process.env.NOTION_TOKEN;
+  const token = process.env.NOTION_API_KEY || process.env.NOTION_TOKEN;
   if (!token) {
     return null;
   }
-  return new Client({ auth: token });
+  return new Client({
+    auth: token,
+    notionVersion: "2026-03-11",
+  });
 }
 
-function isFullPage(item: unknown): item is PageObjectResponse {
-  return typeof item === "object" && item !== null && "properties" in item;
+function normalizeNotionId(id: string): string {
+  const clean = id.replace(/-/g, "");
+  if (clean.length === 32) {
+    return `${clean.slice(0, 8)}-${clean.slice(8, 12)}-${clean.slice(12, 16)}-${clean.slice(16, 20)}-${clean.slice(20)}`;
+  }
+  return id;
 }
-
-function isFullBlock(block: unknown): block is BlockObjectResponse {
-  return typeof block === "object" && block !== null && "type" in block;
-}
-
-export interface MinimalRichTextItem {
-  plain_text?: string;
-}
-
-export interface ParagraphBlock {
-  type: "paragraph";
-  paragraph: { rich_text?: readonly MinimalRichTextItem[] };
-}
-export interface Heading1Block {
-  type: "heading_1";
-  heading_1: { rich_text?: readonly MinimalRichTextItem[] };
-}
-export interface Heading2Block {
-  type: "heading_2";
-  heading_2: { rich_text?: readonly MinimalRichTextItem[] };
-}
-export interface Heading3Block {
-  type: "heading_3";
-  heading_3: { rich_text?: readonly MinimalRichTextItem[] };
-}
-export interface BulletedListItemBlock {
-  type: "bulleted_list_item";
-  bulleted_list_item: { rich_text?: readonly MinimalRichTextItem[] };
-}
-export interface NumberedListItemBlock {
-  type: "numbered_list_item";
-  numbered_list_item: { rich_text?: readonly MinimalRichTextItem[] };
-}
-export interface DividerBlock {
-  type: "divider";
-}
-export interface EmbedBlock {
-  type: "embed";
-  embed: { url: string };
-}
-export interface ImageBlock {
-  type: "image";
-  image: { type: "file"; file: { url: string } } | { type: "external"; external: { url: string } };
-}
-export interface FallbackBlock {
-  type: string;
-}
-
-export type MinimalBlock =
-  | ParagraphBlock
-  | Heading1Block
-  | Heading2Block
-  | Heading3Block
-  | BulletedListItemBlock
-  | NumberedListItemBlock
-  | DividerBlock
-  | EmbedBlock
-  | ImageBlock
-  | FallbackBlock;
 
 export function formatRichText(richTextArray?: readonly MinimalRichTextItem[]): string {
   if (!Array.isArray(richTextArray)) return "";
-  return richTextArray.map((t) => t.plain_text || "").join("");
+  return richTextArray.map((t) => t.plain_text || t.text?.content || "").join("");
 }
 
-export function parseBlockContent(block: MinimalBlock): { type: string; content: string } {
+export function parseBlockContent(block: RawNotionBlock): { type: string; content: string } {
   switch (block.type) {
     case "paragraph":
       return {
         type: block.type,
-        content: "paragraph" in block ? formatRichText(block.paragraph.rich_text) : "",
+        content: formatRichText(block.paragraph?.rich_text),
       };
     case "heading_1":
       return {
         type: block.type,
-        content: "heading_1" in block ? formatRichText(block.heading_1.rich_text) : "",
+        content: formatRichText(block.heading_1?.rich_text),
       };
     case "heading_2":
       return {
         type: block.type,
-        content: "heading_2" in block ? formatRichText(block.heading_2.rich_text) : "",
+        content: formatRichText(block.heading_2?.rich_text),
       };
     case "heading_3":
       return {
         type: block.type,
-        content: "heading_3" in block ? formatRichText(block.heading_3.rich_text) : "",
+        content: formatRichText(block.heading_3?.rich_text),
       };
     case "bulleted_list_item":
       return {
         type: block.type,
-        content:
-          "bulleted_list_item" in block ? formatRichText(block.bulleted_list_item.rich_text) : "",
+        content: formatRichText(block.bulleted_list_item?.rich_text),
       };
     case "numbered_list_item":
       return {
         type: block.type,
-        content:
-          "numbered_list_item" in block ? formatRichText(block.numbered_list_item.rich_text) : "",
+        content: formatRichText(block.numbered_list_item?.rich_text),
+      };
+    case "to_do":
+      return {
+        type: block.type,
+        content: formatRichText(block.to_do?.rich_text),
+      };
+    case "toggle":
+      return {
+        type: block.type,
+        content: formatRichText(block.toggle?.rich_text),
+      };
+    case "quote":
+      return {
+        type: block.type,
+        content: formatRichText(block.quote?.rich_text),
+      };
+    case "callout":
+      return {
+        type: block.type,
+        content: formatRichText(block.callout?.rich_text),
+      };
+    case "code":
+      return {
+        type: block.type,
+        content: formatRichText(block.code?.rich_text),
       };
     case "divider":
       return { type: block.type, content: "---" };
     case "embed":
-      return { type: block.type, content: "embed" in block ? block.embed.url : "" };
+      return { type: block.type, content: block.embed?.url || "" };
     case "image":
-      if ("image" in block) {
-        if (block.image.type === "file") {
-          return { type: block.type, content: block.image.file.url };
-        }
-        return { type: block.type, content: block.image.external.url };
+      if (block.image?.type === "file") {
+        return { type: block.type, content: block.image.file?.url || "" };
       }
-      return { type: block.type, content: "" };
+      return { type: block.type, content: block.image?.external?.url || "" };
     default:
       return { type: block.type, content: "" };
   }
+}
+
+function extractPageTitle(properties?: RawNotionPage["properties"]): string {
+  if (!properties) return "Untitled";
+  for (const key of Object.keys(properties)) {
+    const prop = properties[key];
+    if (prop.type === "title" && Array.isArray(prop.title) && prop.title.length > 0) {
+      return formatRichText(prop.title);
+    }
+  }
+  return "Untitled";
+}
+
+function findTitlePropertyName(properties?: RawNotionPage["properties"]): string {
+  if (!properties) return "title";
+  for (const key of Object.keys(properties)) {
+    const prop = properties[key];
+    if (prop.type === "title") {
+      return key;
+    }
+  }
+  return "title";
 }
 
 export async function listNotionDatabasePages(): Promise<NotionPageSummary[]> {
@@ -156,42 +197,29 @@ export async function listNotionDatabasePages(): Promise<NotionPageSummary[]> {
     ];
   }
 
-  try {
-    const response = await client.databases.query({
-      database_id: databaseId,
-      page_size: 50,
+  const cleanDbId = normalizeNotionId(databaseId);
+  const response = await client.request<{ results?: RawNotionPage[] }>({
+    path: `databases/${cleanDbId}/query`,
+    method: "post",
+    body: { page_size: 50 },
+  });
+
+  const pages: NotionPageSummary[] = [];
+
+  for (const item of response.results || []) {
+    const title = extractPageTitle(item.properties);
+    const iconEmoji = item.icon?.type === "emoji" ? item.icon.emoji : "📄";
+
+    pages.push({
+      id: item.id,
+      title,
+      icon: iconEmoji,
+      lastEditedTime: item.last_edited_time || new Date().toISOString(),
+      url: item.url || `https://notion.so/${item.id}`,
     });
-
-    const pages: NotionPageSummary[] = [];
-
-    for (const item of response.results) {
-      if (!isFullPage(item)) continue;
-
-      let title = "Untitled";
-      for (const key of Object.keys(item.properties)) {
-        const prop = item.properties[key];
-        if (prop.type === "title" && prop.title.length > 0) {
-          title = formatRichText(prop.title as RichTextItemResponse[]);
-          break;
-        }
-      }
-
-      const iconEmoji = item.icon?.type === "emoji" ? item.icon.emoji : "📄";
-
-      pages.push({
-        id: item.id,
-        title,
-        icon: iconEmoji,
-        lastEditedTime: item.last_edited_time,
-        url: item.url,
-      });
-    }
-
-    return pages;
-  } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : "Database query failed";
-    throw new Error(`Failed to query Notion database: ${message}`);
   }
+
+  return pages;
 }
 
 export async function getNotionPageDetail(pageId: string): Promise<NotionPageDetail> {
@@ -232,42 +260,30 @@ export async function getNotionPageDetail(pageId: string): Promise<NotionPageDet
     };
   }
 
+  const cleanPageId = normalizeNotionId(pageId);
+
   const [rawPage, blocksResponse] = await Promise.all([
-    client.pages.retrieve({ page_id: pageId }),
-    client.blocks.children.list({ block_id: pageId, page_size: 100 }),
+    client.pages.retrieve({ page_id: cleanPageId }) as Promise<RawNotionPage>,
+    client.blocks.children.list({
+      block_id: cleanPageId,
+      page_size: 100,
+    }) as Promise<{ results?: RawNotionBlock[] }>,
   ]);
 
-  let title = "Untitled";
-  let iconEmoji = "📄";
-  let pageUrl = `https://notion.so/${pageId}`;
-  let lastEditedTime = new Date().toISOString();
-
-  if (isFullPage(rawPage)) {
-    pageUrl = rawPage.url;
-    lastEditedTime = rawPage.last_edited_time;
-    if (rawPage.icon?.type === "emoji") {
-      iconEmoji = rawPage.icon.emoji;
-    }
-    for (const key of Object.keys(rawPage.properties)) {
-      const prop = rawPage.properties[key];
-      if (prop.type === "title" && prop.title.length > 0) {
-        title = formatRichText(prop.title as RichTextItemResponse[]);
-        break;
-      }
-    }
-  }
+  const title = extractPageTitle(rawPage.properties);
+  const iconEmoji = rawPage.icon?.type === "emoji" ? rawPage.icon.emoji : "📄";
+  const pageUrl = rawPage.url || `https://notion.so/${cleanPageId}`;
+  const lastEditedTime = rawPage.last_edited_time || new Date().toISOString();
 
   const blocks: NotionBlockItem[] = [];
-  for (const b of blocksResponse.results) {
-    if (isFullBlock(b)) {
-      const { type, content } = parseBlockContent(b);
-      blocks.push({
-        id: b.id,
-        type,
-        content,
-        hasChildren: b.has_children,
-      });
-    }
+  for (const b of blocksResponse.results || []) {
+    const { type, content } = parseBlockContent(b);
+    blocks.push({
+      id: b.id,
+      type,
+      content,
+      hasChildren: Boolean(b.has_children),
+    });
   }
 
   return {
@@ -291,25 +307,29 @@ export async function upsertNotionEmbedBlock(
     return { action: "appended", blockId: "mock-embed-block-id" };
   }
 
-  const children = await client.blocks.children.list({ block_id: pageId, page_size: 100 });
-  const existingEmbed = children.results.find((b) => {
+  const cleanPageId = normalizeNotionId(pageId);
+  const listData = (await client.blocks.children.list({
+    block_id: cleanPageId,
+    page_size: 100,
+  })) as { results?: RawNotionBlock[] };
+
+  const existingEmbed = (listData.results || []).find((b) => {
     return (
-      isFullBlock(b) &&
       b.type === "embed" &&
-      (b.embed.url.includes("/embed/") || b.embed.url === embedUrl)
+      Boolean(b.embed?.url && (b.embed.url.includes("/embed/") || b.embed.url === embedUrl))
     );
   });
 
-  if (existingEmbed && isFullBlock(existingEmbed)) {
+  if (existingEmbed) {
     await client.blocks.update({
       block_id: existingEmbed.id,
-      embed: { url: embedUrl },
+      embed: { url: embedUrl } as unknown as never,
     });
     return { action: "updated", blockId: existingEmbed.id };
   }
 
-  const appendResponse = await client.blocks.children.append({
-    block_id: pageId,
+  const appendResponse = (await client.blocks.children.append({
+    block_id: cleanPageId,
     children: [
       {
         object: "block",
@@ -317,10 +337,81 @@ export async function upsertNotionEmbedBlock(
         embed: {
           url: embedUrl,
         },
-      },
+      } as unknown as never,
     ],
-  });
+  })) as { results?: Array<{ id: string }> };
 
-  const createdBlock = appendResponse.results[0];
-  return { action: "appended", blockId: createdBlock.id };
+  const createdBlock = appendResponse.results?.[0];
+  return { action: "appended", blockId: createdBlock?.id || "appended-block-id" };
+}
+
+export async function updateNotionPageContent(
+  pageId: string,
+  updates: NotionUpdatePagePayload
+): Promise<NotionUpdatePageResult> {
+  const client = getNotionClient();
+  if (!client) {
+    return {
+      updatedTitle: updates.title,
+      updatedBlockCount: updates.blocks?.length || 0,
+    };
+  }
+
+  const cleanPageId = normalizeNotionId(pageId);
+  let updatedTitle: string | undefined;
+
+  if (updates.title !== undefined) {
+    const rawPage = (await client.pages.retrieve({
+      page_id: cleanPageId,
+    })) as RawNotionPage;
+
+    const titlePropName = findTitlePropertyName(rawPage.properties);
+
+    await client.pages.update({
+      page_id: cleanPageId,
+      properties: {
+        [titlePropName]: {
+          title: [{ type: "text", text: { content: updates.title } }],
+        },
+      } as unknown as never,
+    });
+
+    updatedTitle = updates.title;
+  }
+
+  let updatedBlockCount = 0;
+  if (Array.isArray(updates.blocks)) {
+    for (const b of updates.blocks) {
+      const richText = [{ type: "text", text: { content: b.content } }];
+      const allowedTextTypes = [
+        "paragraph",
+        "heading_1",
+        "heading_2",
+        "heading_3",
+        "bulleted_list_item",
+        "numbered_list_item",
+        "to_do",
+        "toggle",
+        "quote",
+        "callout",
+        "code",
+      ];
+
+      if (!allowedTextTypes.includes(b.type)) {
+        continue;
+      }
+
+      try {
+        await client.blocks.update({
+          block_id: b.id,
+          [b.type]: { rich_text: richText },
+        } as unknown as never);
+        updatedBlockCount++;
+      } catch (err) {
+        console.warn(`Failed to update block ${b.id}:`, err);
+      }
+    }
+  }
+
+  return { updatedTitle, updatedBlockCount };
 }
