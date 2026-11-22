@@ -25,3 +25,19 @@ export interface NotionSyncEmbedResponse {
   blockId: string;
   embedUrl: string;
 }
+
+export interface NotionUpdateBlockItem {
+  id: string;
+  type: string;
+  content: string;
+}
+
+export interface NotionUpdatePagePayload {
+  title?: string;
+  blocks?: NotionUpdateBlockItem[];
+}
+
+export interface NotionUpdatePageResult {
+  updatedTitle?: string;
+  updatedBlockCount: number;
+}

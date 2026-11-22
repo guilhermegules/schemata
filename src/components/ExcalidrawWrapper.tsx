@@ -44,6 +44,7 @@ interface ExcalidrawWrapperProps {
   initialElements?: readonly ExcalidrawElement[];
   initialAppState?: Partial<AppStatePersisted>;
   isReadOnly?: boolean;
+  theme?: "light" | "dark";
 }
 
 export function ExcalidrawWrapper({
@@ -51,6 +52,7 @@ export function ExcalidrawWrapper({
   initialElements = [],
   initialAppState,
   isReadOnly = false,
+  theme = "light",
 }: ExcalidrawWrapperProps) {
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -194,6 +196,7 @@ export function ExcalidrawWrapper({
           },
         }}
         onChange={handleChange}
+        theme={theme}
         viewModeEnabled={isReadOnly}
         zenModeEnabled={isReadOnly}
         gridModeEnabled={false}

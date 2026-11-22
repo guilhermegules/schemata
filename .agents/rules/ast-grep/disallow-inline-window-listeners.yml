@@ -1,0 +1,10 @@
+id: disallow-inline-window-listeners
+message: "Do not attach window event listeners directly inside JSX event handlers. Manage listeners inside a useEffect hook with a deterministic cleanup function to prevent memory and event listener leaks."
+severity: error
+language: typescript
+rule:
+  pattern: |
+    window.addEventListener($$$ARGS)
+  inside:
+    pattern: |
+      onMouseDown={($$$) => { $$$ }}

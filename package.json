@@ -18,7 +18,7 @@
     "@excalidraw/excalidraw": "^0.18.1",
     "@google-cloud/firestore": "^7.11.0",
     "@google-cloud/storage": "^7.14.0",
-    "@notionhq/client": "^2.2.15",
+    "@notionhq/client": "^5.31.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^1.16.0",
